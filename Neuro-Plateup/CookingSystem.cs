@@ -582,7 +582,7 @@ namespace Neuro_Plateup
             return true;
         }
 
-        private bool Assemble(Entity bot, int ItemID, ItemList list, ItemList subItems)
+        private bool Assemble(Entity bot, ItemList list, ItemList subItems)
         {
             // Debug.Log("Assembly:");
             // Debug.Log("Components we have assembled:");
@@ -684,6 +684,7 @@ namespace Neuro_Plateup
                     if (process.Appliances.Contains(applianceID))
                     {
                         // The thing is on the right appliance just process it
+                        // NYI: Is it always interaction (with progress)?
                         EntityManager.AddComponentData(bot, new CMoveTo(target));
                         EntityManager.AddComponentData(bot, new CInteractAction(target, true));
                     }
@@ -802,7 +803,7 @@ namespace Neuro_Plateup
             return subItems.Count > 0;
         }
 
-        public bool AvailabilityCheck(Entity bot, int ItemID, ItemList list)
+        public bool AvailabilityCheck(Entity bot, ItemList list)
         {
             ItemList Items = list;
             if (FindItemAssembly(bot, list, out var subItems))
@@ -831,13 +832,13 @@ namespace Neuro_Plateup
                 }
             }
 
-            if (!Assemble(bot, ItemID, Items, subItems))
+            if (!Assemble(bot, Items, subItems))
                 return false;
 
             return true;
         }
 
-        public void Cook(Entity bot, int ItemID, ItemList Items)
+        public bool Cook(Entity bot, ItemList Items)
         {
             var pos = GetComponent<CPosition>(bot).Position.Rounded();
             if (GetComponentOfHeld<CItem>(bot, out var comp))
@@ -846,19 +847,21 @@ namespace Neuro_Plateup
                 {
                     EntityManager.AddComponentData(bot, new CMoveTo(target));
                     EntityManager.AddComponentData(bot, new CGrabAction(target));
-                    return;
+                    return true;
                 }
             }
             else if (FindNearestItem(Items, pos, out var targetMeal, true, KitchenRoomTypes))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(targetMeal));
                 EntityManager.AddComponentData(bot, new CGrabAction(targetMeal));
-                return;
+                return false;
             }
-            if (!AvailabilityCheck(bot, ItemID, Items))
+            if (!AvailabilityCheck(bot, Items))
             {
                 EntityManager.RemoveComponent<CBotAction>(bot);
+                return true;
             }
+            return false;
         }
     }
 }

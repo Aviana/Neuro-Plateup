@@ -1,5 +1,4 @@
 using Kitchen;
-using Kitchen.Modules;
 using Kitchen.Layouts;
 using KitchenData;
 using UnityEngine;
@@ -19,8 +18,6 @@ namespace Neuro_Plateup
         private EntityQuery BotQuery, IdleBotQuery, Feedback, Service, Fires, Messes, Orders, HeldItems, Ingredients, BinsQuery, UnlockQuery, ProgressionQuery, PatienceQuery;
 
         private readonly Dictionary<int, List<string>> RegisteredActions = new Dictionary<int, List<string>> { };
-
-        private readonly OrderNameRepository OrderNames = new OrderNameRepository();
 
         private bool isInitialized = true;
 
@@ -271,6 +268,7 @@ namespace Neuro_Plateup
             {
                 isInitialized = true;
 
+                // NYI: This also needs to run when a dish is placed in the franchise mode & re-register the prepare dish action
                 var IngredientUnlocks = Ingredients.ToComponentDataArray<CAvailableIngredient>(Allocator.Temp);
                 var UnlockList = new HashSet<int>();
                 foreach (var unlock in IngredientUnlocks)

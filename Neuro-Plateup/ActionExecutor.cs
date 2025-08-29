@@ -19,6 +19,7 @@ namespace Neuro_Plateup
         private Dictionary<string, Action<Entity, string>> _commands;
         private Vector3 StartingPosition;
         private Dictionary<int, PlayerInfo> PlayerData;
+        private readonly OrderNameRepository OrderNames = new OrderNameRepository();
         private CookingSystem cookingSystem;
         private FakeInput input;
 
@@ -61,6 +62,7 @@ namespace Neuro_Plateup
                 { "clean_mess", CleanMess },
                 { "serve", Serve },
                 { "prepare_order", Cook },
+                { "prepare_dish", Prepare },
                 { "empty_bin", ClearBin },
                 { "wash_plates", WashPlates },
                 { "return_plates", ReturnPlates }
@@ -383,6 +385,17 @@ namespace Neuro_Plateup
             }
         }
 
+        private void Prepare(Entity bot, string payload)
+        {
+            if (HasComponent<CMoveTo>(bot) || HasComponent<CInteractAction>(bot) || HasComponent<CGrabAction>(bot))
+                return;
+
+            if (!OrderNameRepository.TryGetValues(payload, out var itemList) || cookingSystem.Cook(bot, itemList))
+            {
+                EntityManager.RemoveComponent<CBotAction>(bot);
+            }
+        }
+
         private void Cook(Entity bot, string payload)
         {
             if (HasComponent<CMoveTo>(bot) || HasComponent<CInteractAction>(bot) || HasComponent<CGrabAction>(bot))
@@ -463,7 +476,7 @@ namespace Neuro_Plateup
             // NYI: Check if there are ingredients in these orders that can be produced in multitasking (like steak) and produce those first 
 
             var finalItem = orderSet.First();
-            cookingSystem.Cook(bot, finalItem.ID, finalItem.Items);
+            cookingSystem.Cook(bot, finalItem.Items);
         }
 
         private void ClearBin(Entity bot, string payload)

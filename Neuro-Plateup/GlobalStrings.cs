@@ -64,6 +64,11 @@ namespace Neuro_Plateup
             },
             { "prepare_order", new ActionStrings
                 {
+                    DESC = "Prepare all items for the current customer group."
+                }
+            },
+            { "prepare_dish", new ActionStrings
+                {
                     DESC = "Prepare an item from the menu."
                 }
             },
