@@ -453,7 +453,7 @@ namespace Neuro_Plateup
             {
                 var holder = GetComponent<CHeldBy>(ent).Holder;
                 var tile = TileManager.GetTile(GetComponent<CPosition>(holder).Position);
-                if (tile.Type == RoomType.Kitchen && MoveToSystem.Hatches.Contains(tile.Position) || tile.Type != RoomType.Kitchen && HasComponent<CPlayer>(holder))
+                if (MoveToSystem.Hatches.Contains(tile.Position) || tile.Type != RoomType.Kitchen && HasComponent<CPlayer>(holder))
                 {
                     var citem = GetComponent<CItem>(ent);
                     for (int i = orderSet.Count - 1; i >= 0; i--)

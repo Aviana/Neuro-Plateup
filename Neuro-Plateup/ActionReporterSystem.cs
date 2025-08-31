@@ -15,7 +15,7 @@ namespace Neuro_Plateup
 {
     public class ActionReporterSystem : WebsocketSystemBase
     {
-        private EntityQuery BotQuery, IdleBotQuery, Feedback, Service, Fires, Messes, Orders, HeldItems, Ingredients, BinsQuery, UnlockQuery, ProgressionQuery, PatienceQuery;
+        private EntityQuery BotQuery, IdleBotQuery, Feedback, Service, Fires, Messes, OrderQuery, HeldItems, Ingredients, BinsQuery, UnlockQuery, ProgressionQuery, PatienceQuery;
 
         private readonly Dictionary<int, List<string>> RegisteredActions = new Dictionary<int, List<string>> { };
 
@@ -56,7 +56,7 @@ namespace Neuro_Plateup
                     .All(
                         typeof(CMess)
                     ));
-            Orders = GetEntityQuery(typeof(CDisplayedItem));
+            OrderQuery = GetEntityQuery(typeof(CDisplayedItem));
             HeldItems = GetEntityQuery(
                 new QueryHelper()
                     .All(
@@ -517,6 +517,7 @@ namespace Neuro_Plateup
 
         public bool HasServableFood(Entity bot)
         {
+            // NYI: make this count served food as well and replicate this in the prepare method
             var patienceList = new Dictionary<Vector3, float>();
             var Groups = PatienceQuery.ToEntityArray(Allocator.Temp);
             foreach (var group in Groups)
@@ -530,7 +531,7 @@ namespace Neuro_Plateup
             Groups.Dispose();
 
             var orderedFood = new ItemComponentList(true);
-            var openOrders = Orders.ToEntityArray(Allocator.Temp);
+            var openOrders = OrderQuery.ToEntityArray(Allocator.Temp);
             foreach (var orderGroup in openOrders)
             {
                 if (RequireBuffer<CDisplayedItem>(orderGroup, out var buffer))
@@ -571,8 +572,70 @@ namespace Neuro_Plateup
 
         public bool HasUnsatisfiedOrders(Entity bot)
         {
-            // NYI: Are there enough CItems to fulfill all standing orders?
-            return true;
+            var patienceList = new Dictionary<Vector3, float>();
+            var Groups = PatienceQuery.ToEntityArray(Allocator.Temp);
+            foreach (var group in Groups)
+            {
+                var comp = GetComponent<CPatience>(group);
+                if (comp.Reason == PatienceReason.WaitForFood || comp.Reason == PatienceReason.GetFoodDelivered)
+                {
+                    patienceList.Add(GetComponent<CPosition>(group).Position, comp.RemainingTime);
+                }
+            }
+            Groups.Dispose();
+
+            if (patienceList.Count < 1)
+            {
+                return false;
+            }
+
+            var orderSets = new Dictionary<float, OrderList>();
+            var Orders = OrderQuery.ToEntityArray(Allocator.Temp);
+            foreach (var orderGroup in Orders)
+            {
+                foreach (var order in GetBuffer<CDisplayedItem>(orderGroup))
+                {
+                    if (!patienceList.ContainsKey(order.TablePosition))
+                        break;
+
+                    var patience = patienceList[order.TablePosition];
+                    if (!orderSets.ContainsKey(patience))
+                    {
+                        orderSets[patience] = new OrderList(GetComponent<CItem>(order.Item), order.TablePosition);
+                    }
+                    else
+                    {
+                        orderSets[patience].Add(GetComponent<CItem>(order.Item));
+                    }
+                }
+            }
+            Orders.Dispose();
+
+            if (orderSets.Count < 1)
+            {
+                return false;
+            }
+
+            var orderSet = orderSets.OrderBy(kvp => kvp.Key).First().Value.Items;
+            var Items = HeldItems.ToEntityArray(Allocator.Temp);
+            foreach (var ent in Items)
+            {
+                var holder = GetComponent<CHeldBy>(ent).Holder;
+                var tile = TileManager.GetTile(GetComponent<CPosition>(holder).Position);
+                if (MoveToSystem.Hatches.Contains(tile.Position) || tile.Type != RoomType.Kitchen && HasComponent<CPlayer>(holder))
+                {
+                    var citem = GetComponent<CItem>(ent);
+                    for (int i = orderSet.Count - 1; i >= 0; i--)
+                    {
+                        if (orderSet[i].Items.IsEquivalent(citem.Items))
+                        {
+                            orderSet.RemoveAt(i);
+                            break;
+                        }
+                    }
+                }
+            }
+            return orderSet.Count > 0;
         }
 
         public bool IsBinFull(Entity bot)
