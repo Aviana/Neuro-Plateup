@@ -541,6 +541,9 @@ namespace Neuro_Plateup
                         if (!patienceList.ContainsKey(order.TablePosition))
                             break;
 
+                        if (order.IsComplete)
+                            continue;
+
                         if (Require<CItem>(order.Item, out var comp))
                             orderedFood.Add(comp);
                     }
@@ -597,6 +600,9 @@ namespace Neuro_Plateup
                 {
                     if (!patienceList.ContainsKey(order.TablePosition))
                         break;
+
+                    if (order.IsComplete)
+                        continue;
 
                     var patience = patienceList[order.TablePosition];
                     if (!orderSets.ContainsKey(patience))

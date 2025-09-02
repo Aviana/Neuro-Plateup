@@ -292,6 +292,9 @@ namespace Neuro_Plateup
                     if (!patienceList.ContainsKey(order.TablePosition))
                         break;
 
+                    if (order.IsComplete)
+                        continue;
+
                     var patience = patienceList[order.TablePosition];
                     if (!orderList.ContainsKey(patience))
                     {
@@ -427,6 +430,9 @@ namespace Neuro_Plateup
                 {
                     if (!patienceList.ContainsKey(order.TablePosition))
                         break;
+
+                    if (order.IsComplete)
+                        continue;
 
                     var patience = patienceList[order.TablePosition];
                     if (!orderSets.ContainsKey(patience))
