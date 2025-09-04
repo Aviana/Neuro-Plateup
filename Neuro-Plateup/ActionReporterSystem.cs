@@ -544,7 +544,17 @@ namespace Neuro_Plateup
                             break;
 
                         if (order.ShowExtra)
-                            orderedFood.Add(new ItemInfo(order.ExtraID, new FixedListInt64 { order.ExtraID }));
+                        {
+                            if (CookingSystem.ServeProviders.ContainsKey(order.ExtraID))
+                            {
+                                openOrders.Dispose();
+                                return true;
+                            }
+                            else
+                            {
+                                orderedFood.Add(new ItemInfo(order.ExtraID, new FixedListInt64 { order.ExtraID }));
+                            }
+                        }
 
                         if (order.IsComplete)
                                 continue;
