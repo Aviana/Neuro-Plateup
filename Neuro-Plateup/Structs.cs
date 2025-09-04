@@ -3,9 +3,6 @@ using UnityEngine;
 using Unity.Collections;
 using Unity.Entities;
 using System.Collections.Generic;
-using Kitchen;
-using System.Collections;
-using System.Linq;
 
 namespace Neuro_Plateup
 {
@@ -21,6 +18,17 @@ namespace Neuro_Plateup
         {
             Position = position;
             itemID = resultID;
+        }
+    }
+
+    public struct CBotOrders : IBufferElementData
+    {
+        public int ID;
+        public FixedListInt64 Items;
+        public CBotOrders(int id, FixedListInt64 items)
+        {
+            ID = id;
+            Items = items;
         }
     }
 
@@ -100,72 +108,23 @@ namespace Neuro_Plateup
         }
     }
 
-    public readonly struct ItemComponentList
-    {
-        private readonly List<CItem> Data;
-
-        public readonly void Add(CItem item)
-        {
-            Data.Add(item);
-        }
-
-        public readonly bool Contains(CItem a)
-        {
-            foreach (var item in Data)
-            {
-                if (item.ID == a.ID && item.Items.IsEquivalent(a.Items))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public bool IsEmpty => Data.Count == 0;
-
-        public ItemComponentList(bool empty = true)
-        {
-            Data = new List<CItem>();
-        }
-
-        public ItemComponentList(CItem item)
-        {
-            Data = new List<CItem> { item };
-        }
-
-        public void Remove(CItem item)
-        {
-            Data.Remove(item);
-        }
-
-        public int Count => Data.Count;
-
-        public CItem First() => Data.First();
-
-        public CItem this[int index]
-        {
-            get => Data[index];
-            set => Data[index] = value;
-        }
-
-        public void RemoveAt(int i) => Data.RemoveAt(i);
-    }
-
     public struct OrderList
     {
-        public ItemComponentList Items;
+        public List<ItemInfo> Items;
         public Vector3 Position;
 
-        public readonly void Add(CItem item)
+        public readonly void Add(ItemInfo item)
         {
             Items.Add(item);
         }
 
-        public OrderList(CItem item, Vector3 position)
+        public OrderList(Vector3 position)
         {
-            Items = new ItemComponentList(item);
+            Items = new List<ItemInfo>();
             Position = position;
         }
+
+        public readonly IEnumerator<ItemInfo> GetValues() => Items.GetEnumerator();
     }
 
     public struct ItemCreationProcess
@@ -173,5 +132,92 @@ namespace Neuro_Plateup
         public int ID;
         public HashSet<int> itemIDs;
         public HashSet<int> Appliances;
+    }
+
+    public struct ItemInfo
+    {
+        public int ID;
+        public FixedListInt64 Items;
+
+        public ItemInfo(int id, FixedListInt64 list)
+        {
+            ID = id;
+            Items = list;
+        }
+
+        public static bool operator ==(ItemInfo a, ItemInfo b)
+        {
+            if (a.Items.Length != b.Items.Length)
+                return false;
+
+            var matched = new bool[b.Items.Length];
+
+            for (int i = 0; i < a.Items.Length; i++)
+            {
+                bool found = false;
+
+                for (int j = 0; j < b.Items.Length; j++)
+                {
+                    if (!matched[j] && a.Items[i] == b.Items[j])
+                    {
+                        matched[j] = true;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static bool operator !=(ItemInfo a, ItemInfo b)
+        {
+            return !(a == b);
+        }
+
+        public readonly bool Equals(ItemInfo other)
+        {
+            return this == other;
+        }
+
+        public override readonly bool Equals(object obj)
+        {
+            return obj is ItemInfo other && Equals(other);
+        }
+
+        public override readonly int GetHashCode()
+        {
+            int hash = 17;
+
+            FixedListInt64 sortedItems = Items;
+            Sort(ref sortedItems);
+
+            for (int i = 0; i < sortedItems.Length; i++)
+            {
+                hash = hash * 31 + sortedItems[i];
+            }
+
+            return hash;
+        }
+
+        private static void Sort(ref FixedListInt64 list)
+        {
+            for (int i = 1; i < list.Length; i++)
+            {
+                int key = list[i];
+                int j = i - 1;
+
+                while (j >= 0 && list[j] > key)
+                {
+                    list[j + 1] = list[j];
+                    j--;
+                }
+
+                list[j + 1] = key;
+            }
+        }
     }
 }

@@ -38,7 +38,10 @@ namespace Neuro_Plateup
                         typeof(CBotControl),
                         typeof(CBotRole)
                     ).None(
-                        typeof(CBotAction)
+                        typeof(CBotAction),
+                        typeof(CMoveTo),
+                        typeof(CGrabAction),
+                        typeof(CInteractAction)
                     ));
             Feedback = GetEntityQuery(typeof(CBotFeedback));
             Service = GetEntityQuery(
@@ -277,10 +280,10 @@ namespace Neuro_Plateup
                 }
                 IngredientUnlocks.Dispose();
 
-                foreach (var order in OrderNameRepository.AllEntries)
+                foreach (var order in OrderNameRepository.Data)
                 {
                     var flag = true;
-                    foreach (var ingredient in order.Value)
+                    foreach (var ingredient in order.Value.Items)
                     {
                         if (!UnlockList.Contains(ingredient))
                         {
@@ -444,7 +447,7 @@ namespace Neuro_Plateup
                 {
                     ID = buffer[1].ID;
                 }
-                if (GLOBALSTRINGS.UNLOCKS.Keys.Contains(ID))
+                if (GLOBALSTRINGS.UNLOCKS.ContainsKey(ID))
                 {
                     desc = GLOBALSTRINGS.UNLOCKS[ID];
                 }
@@ -517,7 +520,6 @@ namespace Neuro_Plateup
 
         public bool HasServableFood(Entity bot)
         {
-            // NYI: make this count served food as well and replicate this in the prepare method
             var patienceList = new Dictionary<Vector3, float>();
             var Groups = PatienceQuery.ToEntityArray(Allocator.Temp);
             foreach (var group in Groups)
@@ -530,7 +532,7 @@ namespace Neuro_Plateup
             }
             Groups.Dispose();
 
-            var orderedFood = new ItemComponentList(true);
+            var orderedFood = new List<ItemInfo>();
             var openOrders = OrderQuery.ToEntityArray(Allocator.Temp);
             foreach (var orderGroup in openOrders)
             {
@@ -541,17 +543,28 @@ namespace Neuro_Plateup
                         if (!patienceList.ContainsKey(order.TablePosition))
                             break;
 
+                        if (order.ShowExtra)
+                            orderedFood.Add(new ItemInfo(order.ExtraID, new FixedListInt64 { order.ExtraID }));
+
                         if (order.IsComplete)
-                            continue;
+                                continue;
 
                         if (Require<CItem>(order.Item, out var comp))
-                            orderedFood.Add(comp);
+                        {
+                            if (CookingSystem.ServeProviders.ContainsKey(comp.ID))
+                            {
+                                openOrders.Dispose();
+                                return true;
+                            }
+
+                            orderedFood.Add(new ItemInfo(comp.ID, comp.Items.ToFixedListInt64()));
+                        }
                     }
                 }
             }
             openOrders.Dispose();
 
-            if (orderedFood.IsEmpty)
+            if (orderedFood.Count == 0)
                 return false;
 
             // NYI: check the bots hands
@@ -601,18 +614,25 @@ namespace Neuro_Plateup
                     if (!patienceList.ContainsKey(order.TablePosition))
                         break;
 
+                    var patience = patienceList[order.TablePosition];
+                    var hasExtra = order.ShowExtra && !CookingSystem.ServeProviders.ContainsKey(order.ExtraID);
+
+                    if (order.IsComplete && !hasExtra)
+                        continue;
+
+                    if (!orderSets.ContainsKey(patience))
+                    {
+                        orderSets[patience] = new OrderList(order.TablePosition);
+                    }
+
+                    if (hasExtra)
+                        orderSets[patience].Add(new ItemInfo(order.ExtraID, new FixedListInt64 { order.ExtraID }));
+
                     if (order.IsComplete)
                         continue;
 
-                    var patience = patienceList[order.TablePosition];
-                    if (!orderSets.ContainsKey(patience))
-                    {
-                        orderSets[patience] = new OrderList(GetComponent<CItem>(order.Item), order.TablePosition);
-                    }
-                    else
-                    {
-                        orderSets[patience].Add(GetComponent<CItem>(order.Item));
-                    }
+                    var comp = GetComponent<CItem>(order.Item);
+                    orderSets[patience].Add(new ItemInfo(comp.ID, comp.Items.ToFixedListInt64()));
                 }
             }
             Orders.Dispose();
@@ -633,7 +653,7 @@ namespace Neuro_Plateup
                     var citem = GetComponent<CItem>(ent);
                     for (int i = orderSet.Count - 1; i >= 0; i--)
                     {
-                        if (orderSet[i].Items.IsEquivalent(citem.Items))
+                        if (citem.Items.IsEquivalent(orderSet[i].Items))
                         {
                             orderSet.RemoveAt(i);
                             break;
@@ -696,6 +716,7 @@ namespace Neuro_Plateup
 
         public bool HasDirtyPlates(Entity bot)
         {
+            // NYI: Include returning Ketchup, Mustard and Soy Sauce
             var Items = HeldItems.ToEntityArray(Allocator.Temp);
             foreach (var item in Items)
             {

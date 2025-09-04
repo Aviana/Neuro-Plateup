@@ -1,31 +1,26 @@
 using Kitchen;
 using Kitchen.Layouts;
 using KitchenMods;
+using KitchenData;
 using Unity.Entities;
 using Unity.Collections;
 using UnityEngine;
+using System;
 using System.Collections.Generic;
-using KitchenData;
-using Photon.Realtime;
-using System.Linq;
 
 namespace Neuro_Plateup
 {
     public class CookingSystem : GenericSystemBase, IModSystem
     {
-        private EntityQuery BotQuery, ServiceQuery, OrderQuery, HeldItems;
+        private EntityQuery BotQuery, HeldItems;
 
         private MoveToSystem moveTo;
 
-        public static HashSet<int> CookingAppliances;
-        public static HashSet<int> DishWashers;
-        public static HashSet<int> Sinks;
-        public static HashSet<int> Bins;
-        public static HashSet<int> Counters;
-        public static HashSet<int> WaterProviders;
-        public static HashSet<int> Plates;
-        public static HashSet<int> Tables;
-        public static HashSet<int> DirtyPlates;
+        private static Dictionary<int, Action<Entity, List<ItemInfo>>> MealFunctions;
+
+        public static HashSet<int> CookingAppliances, DishWashers, Sinks, Bins, Counters, WaterProviders, Plates, Tables, DirtyPlates, Trash;
+
+        public static Dictionary<int, Vector3> ServeProviders = new Dictionary<int, Vector3>();
 
         public static readonly HashSet<RoomType> AllRoomTypes = new HashSet<RoomType>
         {
@@ -67,8 +62,6 @@ namespace Neuro_Plateup
             RoomType.Kitchen
         };
 
-        private static Dictionary<int, ItemCreationProcess> ItemSources = new Dictionary<int, ItemCreationProcess>();
-
         protected override void Initialise()
         {
             base.Initialise();
@@ -77,10 +70,12 @@ namespace Neuro_Plateup
                 new QueryHelper()
                     .All(
                         typeof(CBotControl),
-                        typeof(CBotAction)
+                        typeof(CBotOrders)
+                    ).None(
+                        typeof(CMoveTo),
+                        typeof(CGrabAction),
+                        typeof(CInteractAction)
                     ));
-            ServiceQuery = GetEntityQuery(typeof(CGroupReadyToOrder));
-            OrderQuery = GetEntityQuery(typeof(CGroupAwaitingOrder));
             HeldItems = GetEntityQuery(
                 new QueryHelper()
                     .All(
@@ -92,85 +87,56 @@ namespace Neuro_Plateup
             DishWashers = new HashSet<int> { -214126192, -823922901 };
             Sinks = new HashSet<int> { 1083874952, 1467371088, -266993023, 540526865 };
             Bins = new HashSet<int> { 2127051779, -1632826946, -1855909480, 481495292, 1551609169, 620400448, 1159228054, 1492264331 }; // Infinite Bin: 1159228054
-            Counters = new HashSet<int> { -1248669347, 1365340297, 1129858275, -1857890774 };
+            Counters = new HashSet<int> { -1248669347, -1339944542, -1963699221 };
             WaterProviders = new HashSet<int> { 1467371088, 1083874952, -266993023 };
             Plates = new HashSet<int> { 540526865, 380220741, 1313469794 };
             Tables = new HashSet<int> { 209074140, -3721951, -34659638, -203679687, -2019409936 };
             DirtyPlates = new HashSet<int> { 1517992271, -1527669626, 348289471 };
+            Trash = new HashSet<int> { 1075166571, -1724190260, -1960690485, -263299406, -1063655063, 936242560, 320607572, 958173724, 469714996, 1770849684, -1755371377, -1140210773, -1370587045, 390623838, -1427780146, -1176063723, -1628910037, -106588634 };
 
-            var ProcessAppliances = new Dictionary<int, HashSet<int>>
+            MealFunctions = new Dictionary<int, Action<Entity, List<ItemInfo>>>
             {
-                {
-                    1972879238,
-                    CookingAppliances
-                },
-                {
-                    2087693779,
-                    Counters
-                },
-                {
-                    -1316622579,
-                    new HashSet<int> { -1609758240, -349733673 }
-                },
-                {
-                    -523839730,
-                    Counters
-                },
-                {
-                    620897674,
-                    Sinks
-                },
-                {
-                    -2048664109,
-                    new HashSet<int>()
-                },
-                {
-                    1393363605,
-                    Counters
-                }
-
+                // NYI: starters and sides
+                { -1307479546, IceCreamFunction },
+                { 1173464355, SteakFunction },
+                { 1067846341, SteakFunction },
+                { -1034349623, SteakFunction },
+                { -783008587, SteakFunction },
+                { -1835015742, SaladFunction },
+                { 599544171, AppleSaladFunction },
+                { -2053442418, PotatoSaladFunction },
+                { -1087205958, PizzaFunction },
+                { -1938035042, DumplingsFunction },
+                { -1293050650, CoffeeFunction },
+                { -249136431, CoffeeFunction },
+                { 184647209, CoffeeFunction },
+                { -1388933833, CoffeeFunction },
+                { -908710218, TeaFunction },
+                { -1721929071, TeaFunction },
+                { -884392267, BurgerFunction },
+                { 1792757441, TurkeyFunction },
+                { -1934880099, NutRoastFunction },
+                { 861630222, PieFunction },
+                { 1366309564, CakeFunction },
+                { 1900532137, SpaghettiFunction },
+                { -1711635749, BologneseFunction },
+                { -383718493, CheesySpaghettiFunction },
+                { 82891941, LasagneFunction },
+                { 536781335, FishFunction },
+                { -1608542149, FishFunction },
+                { 1011454010, FishFilletFunction },
+                { 403539963, OysterFunction },
+                { -491640227, SpinyFishFunction },
+                { 1939124686, CrabCakeFunction },
+                { 244927287, TacoFunction },
+                { 1702578261, HotDogFunction },
+                { 1754241573, BreakfastFunction },
+                { -361808208, StirFryFunction },
+                { 1639948793, CheeseBoardFunction },
+                { 82666420, DessertPieFunction },
+                { -126602470, DessertPieFunction },
+                { 1842093636, DessertPieFunction }
             };
-
-            foreach (var item in Data.Get<Item>())
-            {
-                foreach (var process in item.DerivedProcesses)
-                {
-                    if (process.Result is null || process.Result.ID == -1960690485 || process.Result.ID == 9768533)
-                    {
-                        // Filter Burned Food & Burned Fish
-                        continue;
-                    }
-                    if (!ItemSources.ContainsKey(process.Result.ID))
-                    {
-                        ItemSources[process.Result.ID] = new ItemCreationProcess
-                        {
-                            ID = process.Process.ID,
-                            itemIDs = new HashSet<int> { item.ID },
-                            Appliances = ProcessAppliances[process.Process.ID]
-                        };
-                    }
-                    else
-                    {
-                        ItemSources[process.Result.ID].itemIDs.Add(item.ID);
-                    }
-                }
-                if (item.IsSplittable && item.SplitSubItem != null)
-                {
-                    if (!ItemSources.ContainsKey(item.SplitSubItem.ID))
-                    {
-                        ItemSources[item.SplitSubItem.ID] = new ItemCreationProcess
-                        {
-                            ID = 0,
-                            itemIDs = new HashSet<int> { item.ID },
-                            Appliances = Counters
-                        };
-                    }
-                    else
-                    {
-                        ItemSources[item.SplitSubItem.ID].itemIDs.Add(item.ID);
-                    }
-                }
-            }
         }
 
         protected override void OnStartRunning()
@@ -184,72 +150,56 @@ namespace Neuro_Plateup
         {
             if (Has<CSceneFirstFrame>())
             {
-                // NYI: Do we need this?
-            }
-            var Waiting = GetEntityQuery(typeof(CBotWaiting)).ToEntityArray(Allocator.Temp);
-            foreach (var bot in Waiting)
-            {
-                var comp = GetComponent<CBotWaiting>(bot);
-                var ent = TileManager.GetPrimaryOccupant(comp.Position);
-                if (!HasComponentOfHeld<CItem>(ent) || GetComponentOfHeld<CItem>(ent, out var cheld) && cheld.ID == comp.itemID)
+                ServeProviders.Clear();
+                var pos = GetFrontDoor();
+                if (GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out var cupPos, out _, false, false, NonKitchenRoomTypes))
                 {
-                    EntityManager.RemoveComponent<CBotWaiting>(bot);
-                    continue;
+                    ServeProviders[-1721929071] = cupPos;
+                }
+                if (GetNearestAppliance(pos, new HashSet<int> { -965827229 }, out var ketchupPos, out _, false, false, NonKitchenRoomTypes))
+                {
+                    ServeProviders[-1075930689] = ketchupPos;
+                }
+                if (GetNearestAppliance(pos, new HashSet<int> { -117356585 }, out var mustardPos, out _, false, false, NonKitchenRoomTypes))
+                {
+                    ServeProviders[-1114203942] = mustardPos;
+                }
+                if (GetNearestAppliance(pos, new HashSet<int> { -471813067 }, out var soyPos, out _, false, false, NonKitchenRoomTypes))
+                {
+                    ServeProviders[1190974918] = soyPos;
+                }
+                if (GetNearestAppliance(pos, new HashSet<int> { 303858729 }, out var crackerPos, out _, false, false, NonKitchenRoomTypes))
+                {
+                    ServeProviders[749675166] = crackerPos;
                 }
             }
-            Waiting.Dispose();
+            var Bots = BotQuery.ToEntityArray(Allocator.Temp);
+            foreach (var bot in Bots)
+            {
+                if (HasComponent<CBotWaiting>(bot))
+                {
+                    var comp = GetComponent<CBotWaiting>(bot);
+                    var ent = TileManager.GetPrimaryOccupant(comp.Position);
+                    if (!HasComponentOfHeld<CItem>(ent) || GetComponentOfHeld<CItem>(ent, out var cheld) && cheld.ID == comp.itemID)
+                    {
+                        EntityManager.RemoveComponent<CBotWaiting>(bot);
+                    }
+                }
+                else
+                {
+                    var buffer = GetBuffer<CBotOrders>(bot);
+                    // NYI: Filter this by ID and then feed the biggest amount under a certain ID to its corresponding function
+                    var list = new List<ItemInfo>();
+                    foreach (var entry in buffer)
+                    {
+                        list.Add(new ItemInfo(entry.ID, entry.Items));
+                    }
+                    if (MealFunctions.TryGetValue(buffer[0].ID, out var method))
+                        method(bot, list);
+                }
+            }
+            Bots.Dispose();
         }
-
-        // private bool IsProgressing(Vector3 position)
-        // {
-        //     var ProgressBars = GetEntityQuery(typeof(CProgressIndicator)).ToEntityArray(Allocator.Temp);
-        //     foreach (var bar in ProgressBars)
-        //     {
-        //         var p = GetComponent<CPosition>(bar).Position;
-        //         if (p == position)
-        //         {
-        //             bool flag;
-        //             var comp = GetComponent<CProgressIndicator>(bar);
-        //             if (comp.IsUnknownLength)
-        //             {
-        //                 flag = !comp.IsBad;
-        //             }
-        //             else
-        //             {
-        //                 flag = comp.CurrentChange > 0;
-        //             }
-        //             ProgressBars.Dispose();
-        //             return flag;
-        //         }
-        //     }
-        //     ProgressBars.Dispose();
-        //     return false;
-        // }
-
-        // private bool GetNearest(ComponentType type, Vector3 origin, out Vector3 nearest)
-        // {
-        //     nearest = new Vector3();
-        //     float closestDistanceSqr = float.MaxValue;
-
-        //     var query = GetEntityQuery(type);
-        //     if (query.IsEmptyIgnoreFilter)
-        //         return false;
-
-        //     var entities = query.ToEntityArray(Allocator.Temp);
-        //     foreach (var entity in entities)
-        //     {
-        //         var pos = GetComponent<CPosition>(entity).Position;
-        //         float distSqr = (pos - origin).sqrMagnitude;
-        //         if (distSqr < closestDistanceSqr)
-        //         {
-        //             closestDistanceSqr = distSqr;
-        //             nearest = pos;
-        //         }
-        //     }
-        //     entities.Dispose();
-
-        //     return true;
-        // }
 
         private void EmptyHands(Entity bot)
         {
@@ -273,8 +223,9 @@ namespace Neuro_Plateup
             return false;
         }
 
-        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool onlyEmpty = false, bool notFull = false)
+        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool onlyEmpty = false, bool notFull = false, HashSet<RoomType> validRoomTypes = null)
         {
+            validRoomTypes ??= AllRoomTypes;
             targetPos = new Vector3();
             targetID = new int();
 
@@ -300,6 +251,11 @@ namespace Neuro_Plateup
                 if (validAppliances.Contains(ID))
                 {
                     var pos = GetComponent<CPosition>(appliance).Position;
+
+                    if (!validRoomTypes.Contains(TileManager.GetTile(pos).Type))
+                    {
+                        continue;
+                    }
 
                     if (TileManager.CanReach(sourceTile, pos))
                     {
@@ -431,12 +387,9 @@ namespace Neuro_Plateup
 
                     var pos = GetComponent<CPosition>(holder).Position;
                     var tile = TileManager.GetTile(pos);
-                    if (MoveToSystem.Hatches.Contains(pos))
+                    if (noHatches && MoveToSystem.Hatches.Contains(pos))
                     {
-                        if (noHatches)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
                     else if (!validRoomTypes.Contains(tile.Type))
                     {
@@ -545,7 +498,7 @@ namespace Neuro_Plateup
                     if (HasComponent<CItemHolder>(ent) && !HasComponentOfHeld<CItem>(ent))
                     {
                         var pos = GetComponent<CPosition>(ent).Position;
-                        if (moveTo.GetWaypoint(startpos, pos, out var wp, out var steps) || steps == 0)
+                        if (moveTo.GetWaypoint(startpos.Rounded(), pos, out var wp, out var steps) || steps == 0)
                         {
                             if (steps < currentSteps)
                             {
@@ -558,6 +511,105 @@ namespace Neuro_Plateup
                 }
             }
             return flag;
+        }
+
+        private bool IsPresentOrHasProvider(Entity bot, int item)
+        {
+            var pos = GetComponent<CPosition>(bot).Position;
+            if (GetComponentOfHeld<CItem>(bot, out var cheld) && cheld.ID == item)
+            {
+                return true;
+            }
+            if (!FindNearestItem(new HashSet<int> { item }, pos, out var target, false, KitchenRoomTypes))
+            {
+                return Data.TryGet<Item>(item, out var itemData) && itemData.DedicatedProvider != null;
+            }
+            return true;
+        }
+
+        private bool FindItemAssembly(Entity bot, ItemList Items, out ItemList subItems, out Vector3 pos, out bool heldByBot)
+        {
+            pos = default(Vector3);
+            heldByBot = false;
+            subItems = new ItemList();
+            var ents = HeldItems.ToEntityArray(Allocator.Temp);
+            var currentLength = 1;
+            foreach (var ent in ents)
+            {
+                var holder = GetComponent<CHeldBy>(ent).Holder;
+                if (HasComponent<CPlayer>(holder) && holder != bot)
+                    continue;
+
+                var tile = TileManager.GetTile(GetComponent<CPosition>(holder).Position);
+                if (tile.Type != RoomType.Kitchen || MoveToSystem.Hatches.Contains(tile.Position))
+                    continue;
+
+                var comp = GetComponent<CItem>(ent);
+                if (comp.Items.Count <= Items.Count && comp.Items.Count > currentLength)
+                {
+                    var isSubItem = true;
+                    foreach (var item in comp.Items)
+                    {
+                        if (!Items.Contains(item))
+                        {
+                            isSubItem = false;
+                            break;
+                        }
+                    }
+                    if (isSubItem)
+                    {
+                        currentLength = comp.Items.Count;
+                        subItems = comp.Items;
+                        pos = tile.Position;
+                        heldByBot = holder == bot;
+                    }
+                }
+            }
+            ents.Dispose();
+            return subItems.Count > 0;
+        }
+
+        private void PickupItem(Entity bot, Vector3 pos, int itemID)
+        {
+            var itemData = Data.Get<Item>(itemID);
+            if (itemData.DedicatedProvider != null && GetNearestAppliance(pos, new HashSet<int> { itemData.DedicatedProvider.ID }, out var provider, out var applianceID))
+            {
+                if (applianceID == -1533430406)
+                {
+                    GetIcecream(bot, itemID);
+                }
+                else
+                {
+                    // Write a method that checks for plates
+                    EntityManager.AddComponentData(bot, new CMoveTo(provider));
+                    EntityManager.AddComponentData(bot, new CGrabAction(provider));
+                }
+            }
+            if (FindNearestItem(new HashSet<int> { itemID }, pos, out var target, false, KitchenRoomTypes))
+            {
+                EntityManager.AddComponentData(bot, new CMoveTo(target));
+                EntityManager.AddComponentData(bot, new CGrabAction(target));
+            }
+        }
+
+        private void RemoveFromOrder(Entity bot, ItemInfo item)
+        {
+            if (HasBuffer<CBotOrders>(bot))
+            {
+                var buffer = GetBuffer<CBotOrders>(bot);
+                for (var i = 0; i <= buffer.Length; i++)
+                {
+                    if (buffer[i].ID == item.ID && buffer[i].Items == item.Items)
+                    {
+                        buffer.RemoveAt(i);
+                        if (buffer.Length == 0)
+                        {
+                            EntityManager.RemoveComponent<CBotOrders>(bot);
+                        }
+                        break;
+                    }
+                }
+            }
         }
 
         private bool GetIcecream(Entity bot, int flavor)
@@ -582,286 +634,279 @@ namespace Neuro_Plateup
             return true;
         }
 
-        private bool Assemble(Entity bot, ItemList list, ItemList subItems)
+        private void IceCreamFunction(Entity bot, List<ItemInfo> orders)
         {
-            // Debug.Log("Assembly:");
-            // Debug.Log("Components we have assembled:");
-            // foreach (var i in subItems)
-            // {
-            //     Debug.Log(i);
-            // }
-            // Debug.Log("Components we need to assemble:");
-            // foreach (var i in list)
-            // {
-            //     Debug.Log(i);
-            // }
-            var pos = GetComponent<CPosition>(bot).Position;
-            var Items = list.AsArray();
-            if (GetComponentOfHeld<CItem>(bot, out var held))
-            {
-                if (subItems.Count > 0 && !held.Items.IsEquivalent(subItems))
-                {
-                    EmptyHands(bot);
-                }
-                else
-                {
-                    Data.TryGet<Item>(Items[0], out var itemData);
-                    if (itemData.DedicatedProvider != null && GetNearestAppliance(pos, new HashSet<int> { itemData.DedicatedProvider.ID }, out var provider, out var applianceID))
-                    {
-                        if (applianceID == -1533430406)
-                        {
-                            return GetIcecream(bot, Items[0]);
-                        }
-                        else
-                        {
-                            // Write a method that checks for plates
-                            EntityManager.AddComponentData(bot, new CMoveTo(provider));
-                            EntityManager.AddComponentData(bot, new CGrabAction(provider));
-                        }
-                    }
-                    else if (FindNearestItem(list, pos, out var itemPos, false, KitchenRoomTypes))
-                    {
-                        EntityManager.AddComponentData(bot, new CMoveTo(itemPos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(itemPos));
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-            }
-            else if (subItems.Count > 0 && FindNearestItem(subItems, pos, out var target, false, KitchenRoomTypes))
-            {
-                EntityManager.AddComponentData(bot, new CMoveTo(target));
-                EntityManager.AddComponentData(bot, new CGrabAction(target));
-            }
-            else
-            {
-                Data.TryGet<Item>(Items[0], out var itemData);
-                if (itemData.DedicatedProvider != null && GetNearestAppliance(pos, new HashSet<int> { itemData.DedicatedProvider.ID }, out var provider, out var applianceID))
-                {
-                    if (applianceID == -1533430406)
-                    {
-                        return GetIcecream(bot, Items[0]);
-                    }
-                    else
-                    {
-                        // Write a method that checks for plates
-                        EntityManager.AddComponentData(bot, new CMoveTo(provider));
-                        EntityManager.AddComponentData(bot, new CGrabAction(provider));
-                    }
-                }
-                else if (FindNearestItem(new HashSet<int>(Items), pos, out var itemPos, false, KitchenRoomTypes))
-                {
-                    // NYI: This does not respect the order of assembly probably
-                    EntityManager.AddComponentData(bot, new CMoveTo(itemPos));
-                    EntityManager.AddComponentData(bot, new CGrabAction(itemPos));
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        private bool TryToPrepare(Entity bot, int itemID, int targetItem = 0)
-        {
-            // Return value signals if an action is needed
-            // It should be false if we assign no action
-            var pos = GetComponent<CPosition>(bot).Position;
-            if (GetComponentOfHeld<CItem>(bot, out var cheld) && cheld.ID == itemID)
-            {
-                EmptyHands(bot);
-                return true;
-            }
-            if (ItemSources.TryGetValue(itemID, out var process))
-            {
-                if (FindNearestItem(process.itemIDs, pos, out var target, false, KitchenRoomTypes))
-                {
-                    var applianceID = GetComponent<CAppliance>(TileManager.GetPrimaryOccupant(target)).ID;
-                    if (process.Appliances.Contains(applianceID))
-                    {
-                        // The thing is on the right appliance just process it
-                        // NYI: Is it always interaction (with progress)?
-                        EntityManager.AddComponentData(bot, new CMoveTo(target));
-                        EntityManager.AddComponentData(bot, new CInteractAction(target, true));
-                    }
-                    else
-                    {
-                        EntityManager.AddComponentData(bot, new CMoveTo(target));
-                        EntityManager.AddComponentData(bot, new CGrabAction(target));
-                    }
-                    return true;
-                }
-                if (process.itemIDs.Contains(cheld.ID))
-                {
-                    // We are holding the thing find the correct appliance and put it on it
-                    if (GetNearestAppliance(pos, process.Appliances, out var appliancePos, out var _, true))
-                    {
-                        if (process.ID != 1972879238)
-                        {
-                            EntityManager.AddComponentData(bot, new CMoveTo(appliancePos));
-                            EntityManager.AddComponentData(bot, new CGrabAction(appliancePos));
-                        }
-                        else
-                        {
-                            // NYI: Ovens and microwaves
-                            // return UseHob(bot, appliancePos, applianceID);
-                            EntityManager.AddComponentData(bot, new CMoveTo(appliancePos));
-                            EntityManager.AddComponentData(bot, new CGrabAction(appliancePos));
-                            EntityManager.AddComponentData(bot, new CBotWaiting(appliancePos, itemID));
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogError("Oh noes there was no free appliance to process " + cheld.ID);
-                    }
-                    return true;
-                }
-                foreach (var sourceItemID in process.itemIDs)
-                {
-                    var item = Data.Get<Item>(sourceItemID);
-                    if (item.DedicatedProvider != null)
-                    {
-                        // Find corresponding provider and use it
-                        if (GetNearestAppliance(pos, new HashSet<int> { item.DedicatedProvider.ID }, out var appliancePos, out var _))
-                        {
-                            EntityManager.AddComponentData(bot, new CMoveTo(appliancePos));
-                            EntityManager.AddComponentData(bot, new CGrabAction(appliancePos));
-                            return true;
-                        }
-                        else
-                        {
-                            // NYI: Edge case Fresh patties
-                        }
-                    }
-                }
-                return TryToPrepare(bot, process.itemIDs.First(), itemID);
-            }
-            else
-            {
-                Debug.LogError($"No process for item {itemID} found");
-            }
-            return false;
-        }
-
-        private bool IsPresentOrHasProvider(Entity bot, int item)
-        {
-            var pos = GetComponent<CPosition>(bot).Position;
-            if (GetComponentOfHeld<CItem>(bot, out var cheld) && cheld.ID == item)
-            {
-                return true;
-            }
-            if (!FindNearestItem(new HashSet<int> { item }, pos, out var target, false, KitchenRoomTypes))
-            {
-                return Data.TryGet<Item>(item, out var itemData) && itemData.DedicatedProvider != null;
-            }
-            return true;
-        }
-
-        private bool FindItemAssembly(Entity bot, ItemList Items, out ItemList subItems)
-        {
-            var list = Items.AsArray();
-            subItems = new ItemList();
-            var ents = HeldItems.ToEntityArray(Allocator.Temp);
-            var currentLength = 0;
-            foreach (var ent in ents)
-            {
-                var holder = GetComponent<CHeldBy>(ent).Holder;
-                if (HasComponent<CPlayer>(holder) && holder != bot)
-                    continue;
-
-                var tile = TileManager.GetTile(GetComponent<CPosition>(holder).Position);
-                if (tile.Type != RoomType.Kitchen || MoveToSystem.Hatches.Contains(tile.Position))
-                    continue;
-
-                var comp = GetComponent<CItem>(ent);
-                var flag = true;
-                if (comp.Items.Count <= list.Length)
-                {
-                    foreach (var item in comp.Items)
-                    {
-                        if (!list.Contains(item))
-                        {
-                            flag = false;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    flag = false;
-                }
-                if (flag && comp.Items.Count > currentLength)
-                {
-                    subItems = comp.Items;
-                }
-            }
-            ents.Dispose();
-            return subItems.Count > 0;
-        }
-
-        public bool AvailabilityCheck(Entity bot, ItemList list)
-        {
-            ItemList Items = list;
-            if (FindItemAssembly(bot, list, out var subItems))
-            {
-                foreach (var subItem in subItems)
-                {
-                    for (var i = 0; i < Items.Count; i++)
-                    {
-                        if (Items[i] == subItem)
-                        {
-                            Items.RemoveAt(i);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            foreach (var item in Items)
-            {
-                if (!IsPresentOrHasProvider(bot, item))
-                {
-                    if (TryToPrepare(bot, item))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            if (!Assemble(bot, Items, subItems))
-                return false;
-
-            return true;
-        }
-
-        public bool Cook(Entity bot, ItemList Items)
-        {
-            var pos = GetComponent<CPosition>(bot).Position.Rounded();
+            var Items = orders[0].Items;
             if (GetComponentOfHeld<CItem>(bot, out var comp))
             {
-                if (comp.Items.IsEquivalent(Items) && GetBestDropOff(pos, out var target))
+                if (comp.ID != -1307479546 && comp.ID != 186895094 && comp.ID != 1570518340 && comp.ID != 502129042)
                 {
-                    EntityManager.AddComponentData(bot, new CMoveTo(target));
-                    EntityManager.AddComponentData(bot, new CGrabAction(target));
-                    return true;
+                    EmptyHands(bot);
+                    return;
+                }
+                foreach (var flavor in comp.Items)
+                {
+                    Items.Remove(flavor);
+                }
+                if (Items.Length == 0)
+                {
+                    if (GetBestDropOff(GetComponent<CPosition>(bot).Position.Rounded(), out var pos))
+                    {
+                        EntityManager.AddComponentData(bot, new CGrabAction(pos));
+                        RemoveFromOrder(bot, orders[0]);
+                    }
+                    else
+                    {
+                        Debug.LogError("No dropoff location free!");
+                    }
+                }
+                else
+                {
+                    GetIcecream(bot, Items[0]);
                 }
             }
-            else if (FindNearestItem(Items, pos, out var targetMeal, true, KitchenRoomTypes))
+            else
             {
-                EntityManager.AddComponentData(bot, new CMoveTo(targetMeal));
-                EntityManager.AddComponentData(bot, new CGrabAction(targetMeal));
-                return false;
+                GetIcecream(bot, Items[0]);
             }
-            if (!AvailabilityCheck(bot, Items))
+        }
+
+        private void SteakFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void SaladFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void AppleSaladFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void PotatoSaladFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void PizzaFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void DumplingsFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void CoffeeFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void TeaFunction(Entity bot, List<ItemInfo> orders)
+        {
+            var Pots = new List<ItemInfo>();
+            var Cups = new List<ItemInfo>();
+            var pos = GetComponent<CPosition>(bot).Position;
+            foreach (var i in orders)
             {
-                EntityManager.RemoveComponent<CBotAction>(bot);
-                return true;
+                if (i.ID == -1721929071)
+                {
+                    Cups.Add(i);
+                }
+                else
+                {
+                    Pots.Add(i);
+                }
             }
-            return false;
+            if (Pots.Count > 0)
+            {
+                if (GetComponentOfHeld<CItem>(bot, out var comp))
+                {
+                    if (comp.ID != 707327422 && comp.ID != 712770280)
+                    {
+                        EmptyHands(bot);
+                        return;
+                    }
+                    if (!comp.Items.Contains(1657174953))
+                    {
+                        GetNearestAppliance(pos, WaterProviders, out var waterPos, out _);
+                        EntityManager.AddComponentData(bot, new CMoveTo(waterPos));
+                        EntityManager.AddComponentData(bot, new CInteractAction(waterPos, false));
+                    }
+                    else if (!comp.Items.Contains(574857689))
+                    {
+                        GetNearestAppliance(pos, new HashSet<int> { -1598460622 }, out var bagPos, out _);
+                        EntityManager.AddComponentData(bot, new CMoveTo(bagPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(bagPos));
+                    }
+                    else
+                    {
+                        if (GetBestDropOff(pos, out var hatchPos))
+                        {
+                            EntityManager.AddComponentData(bot, new CMoveTo(hatchPos));
+                            EntityManager.AddComponentData(bot, new CGrabAction(hatchPos));
+                            RemoveFromOrder(bot, Pots[0]);
+                        }
+                        else if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
+                        {
+                            Debug.LogError("No hatch free, dropping on next free counter");
+                            EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                            EntityManager.AddComponentData(bot, new CGrabAction(counterPos));
+                            RemoveFromOrder(bot, Pots[0]);
+                        }
+                        else
+                        {
+                            Debug.LogError("No dropoff location free!");
+                        }
+                    }
+                }
+                else
+                {
+                    GetNearestAppliance(pos, new HashSet<int> { -762638188 }, out var potPos, out _);
+                    EntityManager.AddComponentData(bot, new CMoveTo(potPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(potPos));
+                }
+            }
+            else
+            {
+                if (GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out var cupsPos, out _, false, false, KitchenRoomTypes))
+                {
+                    if (GetComponentOfHeld<CItem>(bot, out var comp))
+                    {
+                        if (comp.ID == -1721929071)
+                        {
+                            if (GetBestDropOff(pos, out var hatchPos))
+                            {
+                                RemoveFromOrder(bot, Cups[0]);
+                                EntityManager.AddComponentData(bot, new CMoveTo(hatchPos));
+                                EntityManager.AddComponentData(bot, new CGrabAction(hatchPos));
+                            }
+                            else
+                            {
+                                Debug.LogError("No dropoff location for cup free!");
+                            }
+                        }
+                        else
+                        {
+                            EmptyHands(bot);
+                        }
+                        return;
+                    }
+                    EntityManager.AddComponentData(bot, new CMoveTo(cupsPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(cupsPos));
+                }
+                else
+                {
+                    foreach (var i in Cups)
+                    {
+                        RemoveFromOrder(bot, i);
+                    }
+                }
+            }
+        }
+
+        private void BurgerFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void TurkeyFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void NutRoastFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void PieFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void CakeFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void SpaghettiFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void BologneseFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void CheesySpaghettiFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void LasagneFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void FishFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void FishFilletFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void OysterFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void SpinyFishFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void CrabCakeFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void TacoFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void HotDogFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void BreakfastFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void StirFryFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void CheeseBoardFunction(Entity bot, List<ItemInfo> orders)
+        {
+
+        }
+
+        private void DessertPieFunction(Entity bot, List<ItemInfo> orders)
+        {
+
         }
     }
 }

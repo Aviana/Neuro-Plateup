@@ -19,7 +19,6 @@ namespace Neuro_Plateup
         private Dictionary<string, Action<Entity, string>> _commands;
         private Vector3 StartingPosition;
         private Dictionary<int, PlayerInfo> PlayerData;
-        private readonly OrderNameRepository OrderNames = new OrderNameRepository();
         private CookingSystem cookingSystem;
         private FakeInput input;
 
@@ -283,7 +282,7 @@ namespace Neuro_Plateup
             }
             Groups.Dispose();
 
-            var orderList = new Dictionary<float, OrderList>();
+            var orderSets = new Dictionary<float, OrderList>();
             var Orders = OrderQuery.ToEntityArray(Allocator.Temp);
             foreach (var orderGroup in Orders)
             {
@@ -292,23 +291,30 @@ namespace Neuro_Plateup
                     if (!patienceList.ContainsKey(order.TablePosition))
                         break;
 
+                    var patience = patienceList[order.TablePosition];
+                    var hasExtra = order.ShowExtra && CookingSystem.ServeProviders.ContainsKey(order.ExtraID);
+
+                    if (order.IsComplete && !hasExtra)
+                        continue;
+
+                    if (!orderSets.ContainsKey(patience))
+                    {
+                        orderSets[patience] = new OrderList(order.TablePosition);
+                    }
+
+                    if (hasExtra)
+                        orderSets[patience].Add(new ItemInfo(order.ExtraID, new FixedListInt64 { order.ExtraID }));
+
                     if (order.IsComplete)
                         continue;
 
-                    var patience = patienceList[order.TablePosition];
-                    if (!orderList.ContainsKey(patience))
-                    {
-                        orderList[patience] = new OrderList(GetComponent<CItem>(order.Item), order.TablePosition);
-                    }
-                    else
-                    {
-                        orderList[patience].Add(GetComponent<CItem>(order.Item));
-                    }
+                    var comp = GetComponent<CItem>(order.Item);
+                    orderSets[patience].Add(new ItemInfo(comp.ID, comp.Items.ToFixedListInt64()));
                 }
             }
             Orders.Dispose();
 
-            if (orderList.Count < 1)
+            if (orderSets.Count < 1)
             {
                 EntityManager.RemoveComponent<CBotAction>(bot);
                 return;
@@ -316,17 +322,23 @@ namespace Neuro_Plateup
 
             if (!HasComponentOfHeld<CItem>(bot))
             {
-                var servables = new Dictionary<Vector3, CItem>();
+                var servables = new Dictionary<Vector3, ItemInfo>();
                 var Items = HeldItems.ToEntityArray(Allocator.Temp);
                 foreach (var item in Items)
                 {
                     var pos = GetComponent<CPosition>(GetComponent<CHeldBy>(item).Holder).Position;
                     if (MoveToSystem.Hatches.Contains(pos))
                     {
-                        servables.Add(pos, GetComponent<CItem>(item));
+                        var comp = GetComponent<CItem>(item);
+                        servables.Add(pos, new ItemInfo(comp.ID, comp.Items.ToFixedListInt64()));
                     }
                 }
                 Items.Dispose();
+
+                foreach (var entry in CookingSystem.ServeProviders)
+                {
+                    servables.Add(entry.Value, new ItemInfo(entry.Key, new FixedListInt64 { entry.Key }));
+                }
 
                 if (servables.Count < 1)
                 {
@@ -338,7 +350,7 @@ namespace Neuro_Plateup
                 float currentPatience = float.MaxValue;
                 foreach (var servable in servables)
                 {
-                    foreach (var entry in orderList.OrderBy(kv => kv.Key))
+                    foreach (var entry in orderSets.OrderBy(kv => kv.Key))
                     {
                         if (entry.Key < currentPatience && entry.Value.Items.Contains(servable.Value))
                         {
@@ -363,7 +375,7 @@ namespace Neuro_Plateup
                 Vector3 target = new Vector3();
                 float currentPatience = float.MaxValue;
 
-                foreach (var entry in orderList.OrderBy(kv => kv.Key))
+                foreach (var entry in orderSets.OrderBy(kv => kv.Key))
                 {
                     if (entry.Key < currentPatience && entry.Value.Items.Contains(holding))
                     {
@@ -390,19 +402,36 @@ namespace Neuro_Plateup
 
         private void Prepare(Entity bot, string payload)
         {
-            if (HasComponent<CMoveTo>(bot) || HasComponent<CInteractAction>(bot) || HasComponent<CGrabAction>(bot))
+            if (HasBuffer<CBotOrders>(bot))
                 return;
 
-            if (!OrderNameRepository.TryGetValues(payload, out var itemList) || cookingSystem.Cook(bot, itemList))
+            if (Has<CBotActionRunning>(bot))
             {
+                EntityManager.RemoveComponent<CBotActionRunning>(bot);
                 EntityManager.RemoveComponent<CBotAction>(bot);
+                return;
             }
+            else
+            {
+                EntityManager.AddComponent<CBotActionRunning>(bot);
+            }
+
+            OrderNameRepository.TryGetValues(payload, out var ID, out var Items);
+            var buffer = EntityManager.AddBuffer<CBotOrders>(bot);
+            buffer.Add(new CBotOrders(ID, Items));
         }
 
         private void Cook(Entity bot, string payload)
         {
-            if (HasComponent<CMoveTo>(bot) || HasComponent<CInteractAction>(bot) || HasComponent<CGrabAction>(bot))
+            if (HasBuffer<CBotOrders>(bot))
                 return;
+
+            if (Has<CBotActionRunning>(bot))
+            {
+                EntityManager.RemoveComponent<CBotActionRunning>(bot);
+                EntityManager.RemoveComponent<CBotAction>(bot);
+                return;
+            }
 
             var patienceList = new Dictionary<Vector3, float>();
             var Groups = PatienceQuery.ToEntityArray(Allocator.Temp);
@@ -431,18 +460,25 @@ namespace Neuro_Plateup
                     if (!patienceList.ContainsKey(order.TablePosition))
                         break;
 
+                    var patience = patienceList[order.TablePosition];
+                    var hasExtra = order.ShowExtra && !CookingSystem.ServeProviders.ContainsKey(order.ExtraID);
+
+                    if (order.IsComplete && !hasExtra)
+                        continue;
+
+                    if (!orderSets.ContainsKey(patience))
+                    {
+                        orderSets[patience] = new OrderList(order.TablePosition);
+                    }
+
+                    if (hasExtra)
+                        orderSets[patience].Add(new ItemInfo(order.ExtraID, new FixedListInt64 { order.ExtraID }));
+
                     if (order.IsComplete)
                         continue;
 
-                    var patience = patienceList[order.TablePosition];
-                    if (!orderSets.ContainsKey(patience))
-                    {
-                        orderSets[patience] = new OrderList(GetComponent<CItem>(order.Item), order.TablePosition);
-                    }
-                    else
-                    {
-                        orderSets[patience].Add(GetComponent<CItem>(order.Item));
-                    }
+                    var comp = GetComponent<CItem>(order.Item);
+                    orderSets[patience].Add(new ItemInfo(comp.ID, comp.Items.ToFixedListInt64()));
                 }
             }
             Orders.Dispose();
@@ -464,7 +500,7 @@ namespace Neuro_Plateup
                     var citem = GetComponent<CItem>(ent);
                     for (int i = orderSet.Count - 1; i >= 0; i--)
                     {
-                        if (orderSet[i].Items.IsEquivalent(citem.Items))
+                        if (citem.Items.IsEquivalent(orderSet[i].Items))
                         {
                             orderSet.RemoveAt(i);
                             break;
@@ -479,10 +515,50 @@ namespace Neuro_Plateup
                 return;
             }
 
-            // NYI: Check if there are ingredients in these orders that can be produced in multitasking (like steak) and produce those first 
-
-            var finalItem = orderSet.First();
-            cookingSystem.Cook(bot, finalItem.Items);
+            var buffer = EntityManager.AddBuffer<CBotOrders>(bot);
+            var tea = 0;
+            var boards = 0;
+            foreach (var order in orderSet)
+            {
+                // Teapot is shared by up to 4
+                if (order.ID == -908710218)
+                {
+                    if (tea == 0)
+                    {
+                        buffer.Add(new CBotOrders(order.ID, order.Items));
+                        tea++;
+                    }
+                    else if (tea == 3)
+                    {
+                        tea = 0;
+                    }
+                    else
+                    {
+                        tea++;
+                    }
+                    continue;
+                }
+                // Cheese Board is shared by up to 3
+                else if (order.ID == 1639948793)
+                {
+                    if (boards == 0)
+                    {
+                        buffer.Add(new CBotOrders(order.ID, order.Items));
+                        boards++;
+                    }
+                    else if (boards == 2)
+                    {
+                        boards = 0;
+                    }
+                    else
+                    {
+                        boards++;
+                    }
+                    continue;
+                }
+                buffer.Add(new CBotOrders(order.ID, order.Items));
+            }
+            EntityManager.AddComponent<CBotActionRunning>(bot);
         }
 
         private void ClearBin(Entity bot, string payload)
