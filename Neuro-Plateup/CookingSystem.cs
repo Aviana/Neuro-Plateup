@@ -12,7 +12,7 @@ namespace Neuro_Plateup
 {
     public class CookingSystem : GenericSystemBase, IModSystem
     {
-        private EntityQuery BotQuery, HeldItems;
+        private EntityQuery BotQuery, HeldItems, ResetQuery;
 
         private MoveToSystem moveTo;
 
@@ -83,6 +83,13 @@ namespace Neuro_Plateup
                         typeof(CItem),
                         typeof(CHeldBy)
                     ));
+            ResetQuery = GetEntityQuery(
+                new QueryHelper()
+                    .Any(
+                        typeof(CSceneFirstFrame),
+                        typeof(SIsDayFirstUpdate),
+                        typeof(SIsNightFirstUpdate)
+                    ));
             CookingAppliances = new HashSet<int> { 1154757341, -1448690107, 1266458729, 862493270, -441141351, 805530854, 944301512, -1311702572, -1068749602, 782648278, -1688921160 };
             DishWashers = new HashSet<int> { -214126192, -823922901 };
             Sinks = new HashSet<int> { 1083874952, 1467371088, -266993023, 540526865 };
@@ -148,7 +155,7 @@ namespace Neuro_Plateup
 
         protected override void OnUpdate()
         {
-            if (Has<CSceneFirstFrame>())
+            if (!ResetQuery.IsEmptyIgnoreFilter)
             {
                 ServeProviders.Clear();
                 var pos = GetFrontDoor();
@@ -257,14 +264,6 @@ namespace Neuro_Plateup
                         continue;
                     }
 
-                    if (TileManager.CanReach(sourceTile, pos))
-                    {
-                        flag = true;
-                        targetPos = pos;
-                        targetID = ID;
-                        break;
-                    }
-
                     if (moveTo.GetWaypoint(sourceTile, pos, out var wp, out var steps))
                     {
                         if (steps < currentSteps)
@@ -274,6 +273,13 @@ namespace Neuro_Plateup
                             targetPos = pos;
                             targetID = ID;
                         }
+                    }
+                    else if (steps == 0)
+                    {
+                        flag = true;
+                        targetPos = pos;
+                        targetID = ID;
+                        break;
                     }
                 }
             }
@@ -347,13 +353,6 @@ namespace Neuro_Plateup
                         continue;
                     }
 
-                    if (TileManager.CanReach(start, comp3.Position))
-                    {
-                        position = comp3.Position;
-                        currentSteps = 0;
-                        flag = true;
-                        break;
-                    }
                     if (moveTo.GetWaypoint(start, comp3.Position, out var wp, out var steps))
                     {
                         if (steps < currentSteps)
@@ -362,6 +361,13 @@ namespace Neuro_Plateup
                             position = comp3.Position;
                             flag = true;
                         }
+                    }
+                    else if (steps == 0)
+                    {
+                        position = comp3.Position;
+                        currentSteps = 0;
+                        flag = true;
+                        break;
                     }
                 }
             }
@@ -396,14 +402,6 @@ namespace Neuro_Plateup
                         continue;
                     }
 
-                    if (TileManager.CanReach(start, pos))
-                    {
-                        position = pos;
-                        currentSteps = 0;
-                        flag = true;
-                        break;
-                    }
-
                     if (moveTo.GetWaypoint(start, pos, out var wp, out var steps))
                     {
                         if (steps < currentSteps)
@@ -412,6 +410,13 @@ namespace Neuro_Plateup
                             position = pos;
                             flag = true;
                         }
+                    }
+                    else if (steps == 0)
+                    {
+                        position = pos;
+                        currentSteps = 0;
+                        flag = true;
+                        break;
                     }
                 }
             }
@@ -449,13 +454,6 @@ namespace Neuro_Plateup
                         continue;
                     }
 
-                    if (TileManager.CanReach(start, comp4.Position))
-                    {
-                        position = comp4.Position;
-                        currentSteps = 0;
-                        flag = true;
-                        break;
-                    }
                     if (moveTo.GetWaypoint(start, comp4.Position, out var wp, out var steps))
                     {
                         if (steps < currentSteps)
@@ -464,6 +462,13 @@ namespace Neuro_Plateup
                             position = comp4.Position;
                             flag = true;
                         }
+                    }
+                    else if (steps == 0)
+                    {
+                        position = comp4.Position;
+                        currentSteps = 0;
+                        flag = true;
+                        break;
                     }
                 }
             }
@@ -710,7 +715,7 @@ namespace Neuro_Plateup
         {
             var Pots = new List<ItemInfo>();
             var Cups = new List<ItemInfo>();
-            var pos = GetComponent<CPosition>(bot).Position;
+            var pos = GetComponent<CPosition>(bot).Position.Rounded();
             foreach (var i in orders)
             {
                 if (i.ID == -1721929071)
@@ -773,7 +778,15 @@ namespace Neuro_Plateup
             }
             else
             {
-                if (GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out var cupsPos, out _, false, false, KitchenRoomTypes))
+                if (GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out _, out _, false, false, NonKitchenRoomTypes))
+                {
+                    // If dining has its own cups let them deal with it
+                    foreach (var i in Cups)
+                    {
+                        RemoveFromOrder(bot, i);
+                    }
+                }
+                else
                 {
                     if (GetComponentOfHeld<CItem>(bot, out var comp))
                     {
@@ -796,15 +809,10 @@ namespace Neuro_Plateup
                         }
                         return;
                     }
+
+                    GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out var cupsPos, out _, false, false, NonKitchenRoomTypes);
                     EntityManager.AddComponentData(bot, new CMoveTo(cupsPos));
                     EntityManager.AddComponentData(bot, new CGrabAction(cupsPos));
-                }
-                else
-                {
-                    foreach (var i in Cups)
-                    {
-                        RemoveFromOrder(bot, i);
-                    }
                 }
             }
         }

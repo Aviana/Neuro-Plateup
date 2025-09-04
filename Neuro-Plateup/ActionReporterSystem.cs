@@ -246,26 +246,26 @@ namespace Neuro_Plateup
         {
             base.OnUpdate();
 
-            if (!ProgressionQuery.IsEmptyIgnoreFilter)
-            {
-                var OrderItems = ProgressionQuery.ToEntityArray(Allocator.Temp);
-                foreach (var item in OrderItems)
-                {
-                    if (Require<CProgressionOption>(item, out var comp))
-                    {
-                        Debug.Log(comp.ID);
-                        if (Data.TryGet<Dish>(comp.ID, out var dish))
-                        {
-                            foreach (var menuItem in dish.UnlocksMenuItems)
-                            {
-                                Debug.Log(menuItem.Item.ID);
+            // if (!ProgressionQuery.IsEmptyIgnoreFilter)
+            // {
+            //     var OrderItems = ProgressionQuery.ToEntityArray(Allocator.Temp);
+            //     foreach (var item in OrderItems)
+            //     {
+            //         if (Require<CProgressionOption>(item, out var comp))
+            //         {
+            //             Debug.Log(comp.ID);
+            //             if (Data.TryGet<Dish>(comp.ID, out var dish))
+            //             {
+            //                 foreach (var menuItem in dish.UnlocksMenuItems)
+            //                 {
+            //                     Debug.Log(menuItem.Item.ID);
                                 
-                            }
-                        }
-                    }
-                }
-                OrderItems.Dispose();
-            }
+            //                 }
+            //             }
+            //         }
+            //     }
+            //     OrderItems.Dispose();
+            // }
 
             if (!isInitialized)
             {

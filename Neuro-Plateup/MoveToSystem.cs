@@ -6,8 +6,6 @@ using UnityEngine;
 using Controllers;
 using System.Collections.Generic;
 using Kitchen.Layouts;
-using Kitchen.Layouts.Modules;
-using System.Linq;
 
 namespace Neuro_Plateup
 {

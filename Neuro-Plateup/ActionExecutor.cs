@@ -147,6 +147,7 @@ namespace Neuro_Plateup
             EntityManager.RemoveComponent<CBotActionRunning>(bot);
             EntityManager.RemoveComponent<CBotAction>(bot);
             EntityManager.RemoveComponent<CBotWaiting>(bot);
+            EntityManager.RemoveComponent<CBotOrders>(bot);
         }
 
         private void BecomeChef(Entity bot, string payload)
@@ -320,7 +321,35 @@ namespace Neuro_Plateup
                 return;
             }
 
-            if (!HasComponentOfHeld<CItem>(bot))
+            if (GetComponentOfHeld<CItem>(bot, out var holding))
+            {
+                Vector3 target = new Vector3();
+                float currentPatience = float.MaxValue;
+
+                foreach (var entry in orderSets.OrderBy(kv => kv.Key))
+                {
+                    if (entry.Key < currentPatience && entry.Value.Items.Contains(holding))
+                    {
+                        currentPatience = entry.Key;
+                        target = entry.Value.Position;
+                    }
+                }
+
+                if (currentPatience == float.MaxValue)
+                {
+                    // Dish in hand does not have a delivery target
+                    // NYI: put it back?
+                    EntityManager.RemoveComponent<CBotAction>(bot);
+                    return;
+                }
+
+                // We use this to stall as the result of our serving takes another frame to process
+                EntityManager.AddComponent<CBotActionRunning>(bot);
+
+                EntityManager.AddComponentData(bot, new CMoveTo(target));
+                EntityManager.AddComponentData(bot, new CGrabAction(target));
+            }
+            else
             {
                 var servables = new Dictionary<Vector3, ItemInfo>();
                 var Items = HeldItems.ToEntityArray(Allocator.Temp);
@@ -366,35 +395,6 @@ namespace Neuro_Plateup
                     EntityManager.RemoveComponent<CBotAction>(bot);
                     return;
                 }
-                EntityManager.AddComponentData(bot, new CMoveTo(target));
-                EntityManager.AddComponentData(bot, new CGrabAction(target));
-            }
-            else
-            {
-                GetComponentOfHeld<CItem>(bot, out var holding);
-                Vector3 target = new Vector3();
-                float currentPatience = float.MaxValue;
-
-                foreach (var entry in orderSets.OrderBy(kv => kv.Key))
-                {
-                    if (entry.Key < currentPatience && entry.Value.Items.Contains(holding))
-                    {
-                        currentPatience = entry.Key;
-                        target = entry.Value.Position;
-                    }
-                }
-
-                if (currentPatience == float.MaxValue)
-                {
-                    // Dish in hand does not have a delivery target
-                    // NYI: put it back?
-                    EntityManager.RemoveComponent<CBotAction>(bot);
-                    return;
-                }
-
-                // We use this to stall as the result of our serving takes another frame to process
-                EntityManager.AddComponent<CBotActionRunning>(bot);
-
                 EntityManager.AddComponentData(bot, new CMoveTo(target));
                 EntityManager.AddComponentData(bot, new CGrabAction(target));
             }

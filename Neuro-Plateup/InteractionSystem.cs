@@ -5,8 +5,6 @@ using Unity.Collections;
 using UnityEngine;
 using Controllers;
 using System.Collections.Generic;
-using UniverseLib;
-using Unity.Transforms;
 
 namespace Neuro_Plateup
 {
