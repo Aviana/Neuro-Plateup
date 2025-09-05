@@ -7,6 +7,7 @@ using Unity.Collections;
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Neuro_Plateup
 {
@@ -119,7 +120,6 @@ namespace Neuro_Plateup
                 { 184647209, CoffeeFunction },
                 { -1388933833, CoffeeFunction },
                 { -908710218, TeaFunction },
-                { -1721929071, TeaFunction },
                 { -884392267, BurgerFunction },
                 { 1792757441, TurkeyFunction },
                 { -1934880099, NutRoastFunction },
@@ -142,7 +142,12 @@ namespace Neuro_Plateup
                 { 1639948793, CheeseBoardFunction },
                 { 82666420, DessertPieFunction },
                 { -126602470, DessertPieFunction },
-                { 1842093636, DessertPieFunction }
+                { 1842093636, DessertPieFunction },
+                { -1075930689, GetFromProviderFunction },
+                { -1114203942, GetFromProviderFunction },
+                { 1190974918, GetFromProviderFunction },
+                { 749675166, GetFromProviderFunction },
+                { -1721929071, GetFromProviderFunction },
             };
         }
 
@@ -195,14 +200,17 @@ namespace Neuro_Plateup
                 else
                 {
                     var buffer = GetBuffer<CBotOrders>(bot);
-                    // NYI: Filter this by ID and then feed the biggest amount under a certain ID to its corresponding function
                     var list = new List<ItemInfo>();
+
                     foreach (var entry in buffer)
                     {
                         list.Add(new ItemInfo(entry.ID, entry.Items));
                     }
-                    if (MealFunctions.TryGetValue(buffer[0].ID, out var method))
-                        method(bot, list);
+
+                    var groupedByFunction = list.GroupBy(s => MealFunctions[s.ID]);
+                    var maxGroup = groupedByFunction.OrderByDescending(g => g.Count()).First();
+                    
+                    maxGroup.Key(bot, maxGroup.ToList());
                 }
             }
             Bots.Dispose();
@@ -713,107 +721,52 @@ namespace Neuro_Plateup
 
         private void TeaFunction(Entity bot, List<ItemInfo> orders)
         {
-            var Pots = new List<ItemInfo>();
-            var Cups = new List<ItemInfo>();
             var pos = GetComponent<CPosition>(bot).Position.Rounded();
-            foreach (var i in orders)
+            if (GetComponentOfHeld<CItem>(bot, out var comp))
             {
-                if (i.ID == -1721929071)
+                if (comp.ID != 707327422 && comp.ID != 712770280)
                 {
-                    Cups.Add(i);
+                    EmptyHands(bot);
+                    return;
+                }
+                if (!comp.Items.Contains(1657174953))
+                {
+                    GetNearestAppliance(pos, WaterProviders, out var waterPos, out _);
+                    EntityManager.AddComponentData(bot, new CMoveTo(waterPos));
+                    EntityManager.AddComponentData(bot, new CInteractAction(waterPos, false));
+                }
+                else if (!comp.Items.Contains(574857689))
+                {
+                    GetNearestAppliance(pos, new HashSet<int> { -1598460622 }, out var bagPos, out _);
+                    EntityManager.AddComponentData(bot, new CMoveTo(bagPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(bagPos));
                 }
                 else
                 {
-                    Pots.Add(i);
-                }
-            }
-            if (Pots.Count > 0)
-            {
-                if (GetComponentOfHeld<CItem>(bot, out var comp))
-                {
-                    if (comp.ID != 707327422 && comp.ID != 712770280)
+                    if (GetBestDropOff(pos, out var hatchPos))
                     {
-                        EmptyHands(bot);
-                        return;
+                        EntityManager.AddComponentData(bot, new CMoveTo(hatchPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(hatchPos));
+                        RemoveFromOrder(bot, orders[0]);
                     }
-                    if (!comp.Items.Contains(1657174953))
+                    else if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
                     {
-                        GetNearestAppliance(pos, WaterProviders, out var waterPos, out _);
-                        EntityManager.AddComponentData(bot, new CMoveTo(waterPos));
-                        EntityManager.AddComponentData(bot, new CInteractAction(waterPos, false));
-                    }
-                    else if (!comp.Items.Contains(574857689))
-                    {
-                        GetNearestAppliance(pos, new HashSet<int> { -1598460622 }, out var bagPos, out _);
-                        EntityManager.AddComponentData(bot, new CMoveTo(bagPos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(bagPos));
+                        Debug.LogError("No hatch free, dropping on next free counter");
+                        EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(counterPos));
+                        RemoveFromOrder(bot, orders[0]);
                     }
                     else
                     {
-                        if (GetBestDropOff(pos, out var hatchPos))
-                        {
-                            EntityManager.AddComponentData(bot, new CMoveTo(hatchPos));
-                            EntityManager.AddComponentData(bot, new CGrabAction(hatchPos));
-                            RemoveFromOrder(bot, Pots[0]);
-                        }
-                        else if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
-                        {
-                            Debug.LogError("No hatch free, dropping on next free counter");
-                            EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
-                            EntityManager.AddComponentData(bot, new CGrabAction(counterPos));
-                            RemoveFromOrder(bot, Pots[0]);
-                        }
-                        else
-                        {
-                            Debug.LogError("No dropoff location free!");
-                        }
+                        Debug.LogError("No dropoff location free!");
                     }
-                }
-                else
-                {
-                    GetNearestAppliance(pos, new HashSet<int> { -762638188 }, out var potPos, out _);
-                    EntityManager.AddComponentData(bot, new CMoveTo(potPos));
-                    EntityManager.AddComponentData(bot, new CGrabAction(potPos));
                 }
             }
             else
             {
-                if (GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out _, out _, false, false, NonKitchenRoomTypes))
-                {
-                    // If dining has its own cups let them deal with it
-                    foreach (var i in Cups)
-                    {
-                        RemoveFromOrder(bot, i);
-                    }
-                }
-                else
-                {
-                    if (GetComponentOfHeld<CItem>(bot, out var comp))
-                    {
-                        if (comp.ID == -1721929071)
-                        {
-                            if (GetBestDropOff(pos, out var hatchPos))
-                            {
-                                RemoveFromOrder(bot, Cups[0]);
-                                EntityManager.AddComponentData(bot, new CMoveTo(hatchPos));
-                                EntityManager.AddComponentData(bot, new CGrabAction(hatchPos));
-                            }
-                            else
-                            {
-                                Debug.LogError("No dropoff location for cup free!");
-                            }
-                        }
-                        else
-                        {
-                            EmptyHands(bot);
-                        }
-                        return;
-                    }
-
-                    GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out var cupsPos, out _, false, false, NonKitchenRoomTypes);
-                    EntityManager.AddComponentData(bot, new CMoveTo(cupsPos));
-                    EntityManager.AddComponentData(bot, new CGrabAction(cupsPos));
-                }
+                GetNearestAppliance(pos, new HashSet<int> { -762638188 }, out var potPos, out _);
+                EntityManager.AddComponentData(bot, new CMoveTo(potPos));
+                EntityManager.AddComponentData(bot, new CGrabAction(potPos));
             }
         }
 
@@ -915,6 +868,42 @@ namespace Neuro_Plateup
         private void DessertPieFunction(Entity bot, List<ItemInfo> orders)
         {
 
+        }
+
+        private void GetFromProviderFunction(Entity bot, List<ItemInfo> orders)
+        {
+            var itemInfo = Data.Get<Item>(orders[0].ID);
+            var pos = GetComponent<CPosition>(bot).Position.Rounded();
+            if (GetComponentOfHeld<CItem>(bot, out var comp))
+            {
+                if (orders[0] != comp)
+                {
+                    EmptyHands(bot);
+                    return;
+                }
+                if (GetBestDropOff(pos, out var dropoff))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(dropoff));
+                    EntityManager.AddComponentData(bot, new CGrabAction(dropoff));
+                    RemoveFromOrder(bot, orders[0]);
+                }
+                else
+                {
+                    Debug.LogError("No dropoff location free!");
+                }
+            }
+            else
+            {
+                if (GetNearestAppliance(pos, new HashSet<int> { itemInfo.DedicatedProvider.ID }, out var providerPos, out _, false, false, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(providerPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(providerPos));
+                }
+                else
+                {
+                    Debug.LogError($"Error: Provider for {itemInfo.name} was not found in kitchen!");
+                }
+            }
         }
     }
 }

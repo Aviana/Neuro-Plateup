@@ -1,3 +1,4 @@
+using Kitchen;
 using KitchenMods;
 using UnityEngine;
 using Unity.Collections;
@@ -143,6 +144,19 @@ namespace Neuro_Plateup
         {
             ID = id;
             Items = list;
+        }
+
+        public static bool operator ==(ItemInfo a, CItem b)
+        {
+            if (a.ID != b.ID)
+                return false;
+
+            return b.Items.IsEquivalent(a.Items);
+        }
+
+        public static bool operator !=(ItemInfo a, CItem b)
+        {
+            return !(a == b);
         }
 
         public static bool operator ==(ItemInfo a, ItemInfo b)
