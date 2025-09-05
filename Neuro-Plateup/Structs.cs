@@ -147,7 +147,7 @@ namespace Neuro_Plateup
 
         public static bool operator ==(ItemInfo a, ItemInfo b)
         {
-            if (a.Items.Length != b.Items.Length)
+            if (a.Items.Length != b.Items.Length || a.ID != b.ID)
                 return false;
 
             var matched = new bool[b.Items.Length];
