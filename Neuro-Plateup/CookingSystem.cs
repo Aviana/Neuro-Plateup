@@ -115,10 +115,10 @@ namespace Neuro_Plateup
                 { -2053442418, PotatoSaladFunction },
                 { -1087205958, PizzaFunction },
                 { -1938035042, DumplingsFunction },
-                { -1293050650, CoffeeFunction },
-                { -249136431, CoffeeFunction },
-                { 184647209, CoffeeFunction },
-                { -1388933833, CoffeeFunction },
+                { -1293050650, CoffeeFunction }, // Coffee Cup
+                { -249136431, CoffeeFunction }, // Affogato
+                { 184647209, CoffeeFunction }, // Latte
+                { -1388933833, CoffeeFunction }, // Iced Coffee
                 { -908710218, TeaFunction },
                 { -884392267, BurgerFunction },
                 { 1792757441, TurkeyFunction },
@@ -164,23 +164,23 @@ namespace Neuro_Plateup
             {
                 ServeProviders.Clear();
                 var pos = GetFrontDoor();
-                if (GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out var cupPos, out _, false, false, NonKitchenRoomTypes))
+                if (GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out var cupPos, out _, null, null, NonKitchenRoomTypes))
                 {
                     ServeProviders[-1721929071] = cupPos;
                 }
-                if (GetNearestAppliance(pos, new HashSet<int> { -965827229 }, out var ketchupPos, out _, false, false, NonKitchenRoomTypes))
+                if (GetNearestAppliance(pos, new HashSet<int> { -965827229 }, out var ketchupPos, out _, null, null, NonKitchenRoomTypes))
                 {
                     ServeProviders[-1075930689] = ketchupPos;
                 }
-                if (GetNearestAppliance(pos, new HashSet<int> { -117356585 }, out var mustardPos, out _, false, false, NonKitchenRoomTypes))
+                if (GetNearestAppliance(pos, new HashSet<int> { -117356585 }, out var mustardPos, out _, null, null, NonKitchenRoomTypes))
                 {
                     ServeProviders[-1114203942] = mustardPos;
                 }
-                if (GetNearestAppliance(pos, new HashSet<int> { -471813067 }, out var soyPos, out _, false, false, NonKitchenRoomTypes))
+                if (GetNearestAppliance(pos, new HashSet<int> { -471813067 }, out var soyPos, out _, null, null, NonKitchenRoomTypes))
                 {
                     ServeProviders[1190974918] = soyPos;
                 }
-                if (GetNearestAppliance(pos, new HashSet<int> { 303858729 }, out var crackerPos, out _, false, false, NonKitchenRoomTypes))
+                if (GetNearestAppliance(pos, new HashSet<int> { 303858729 }, out var crackerPos, out _, null, null, NonKitchenRoomTypes))
                 {
                     ServeProviders[749675166] = crackerPos;
                 }
@@ -195,6 +195,12 @@ namespace Neuro_Plateup
                     if (!HasComponentOfHeld<CItem>(ent) || GetComponentOfHeld<CItem>(ent, out var cheld) && cheld.ID == comp.itemID)
                     {
                         EntityManager.RemoveComponent<CBotWaiting>(bot);
+                        return;
+                    }
+                    // We are waiting for an unclosed oven - close it.
+                    if (HasComponent<CRequiresActivation>(ent) && HasComponent<CIsInactive>(ent))
+                    {
+                        EntityManager.AddComponentData(bot, new CInteractAction(comp.Position, false));
                     }
                 }
                 else
@@ -209,7 +215,7 @@ namespace Neuro_Plateup
 
                     var groupedByFunction = list.GroupBy(s => MealFunctions[s.ID]);
                     var maxGroup = groupedByFunction.OrderByDescending(g => g.Count()).First();
-                    
+
                     maxGroup.Key(bot, maxGroup.ToList());
                 }
             }
@@ -238,7 +244,7 @@ namespace Neuro_Plateup
             return false;
         }
 
-        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool onlyEmpty = false, bool notFull = false, HashSet<RoomType> validRoomTypes = null)
+        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool? onlyEmpty = null, bool? notFull = null, HashSet<RoomType> validRoomTypes = null)
         {
             validRoomTypes ??= AllRoomTypes;
             targetPos = new Vector3();
@@ -250,46 +256,42 @@ namespace Neuro_Plateup
             foreach (var appliance in Appliances)
             {
                 var ID = GetComponent<CAppliance>(appliance).ID;
-                if (onlyEmpty)
+                if (onlyEmpty == true && GetComponentOfHeld<CItem>(appliance, out _))
                 {
-                    if (!HasComponent<CItemHolder>(appliance))
-                        continue;
-                    var held = GetComponent<CItemHolder>(appliance).HeldItem;
-                    if (HasComponent<CItem>(held))
-                        continue;
+                    continue;
                 }
-                if (notFull && IsFullAppliance(appliance))
+                if (notFull == true && IsFullAppliance(appliance))
                 {
                     continue;
                 }
 
                 if (validAppliances.Contains(ID))
-                {
-                    var pos = GetComponent<CPosition>(appliance).Position;
-
-                    if (!validRoomTypes.Contains(TileManager.GetTile(pos).Type))
                     {
-                        continue;
-                    }
+                        var pos = GetComponent<CPosition>(appliance).Position;
 
-                    if (moveTo.GetWaypoint(sourceTile, pos, out var wp, out var steps))
-                    {
-                        if (steps < currentSteps)
+                        if (!validRoomTypes.Contains(TileManager.GetTile(pos).Type))
                         {
-                            currentSteps = steps;
+                            continue;
+                        }
+
+                        if (moveTo.GetWaypoint(sourceTile, pos, out var wp, out var steps))
+                        {
+                            if (steps < currentSteps)
+                            {
+                                currentSteps = steps;
+                                flag = true;
+                                targetPos = pos;
+                                targetID = ID;
+                            }
+                        }
+                        else if (steps == 0)
+                        {
                             flag = true;
                             targetPos = pos;
                             targetID = ID;
+                            break;
                         }
                     }
-                    else if (steps == 0)
-                    {
-                        flag = true;
-                        targetPos = pos;
-                        targetID = ID;
-                        break;
-                    }
-                }
             }
             Appliances.Dispose();
             return flag;
@@ -328,8 +330,11 @@ namespace Neuro_Plateup
             return flag;
         }
 
-        public bool FindNearestItem(HashSet<int> list, Vector3 start, out Vector3 position, bool noHatches = true, HashSet<RoomType> validRoomTypes = null)
+        public bool FindNearestItem(Entity bot, HashSet<int> list, Vector3 start, out Vector3 position, bool noHatches = true, HashSet<RoomType> validRoomTypes = null)
         {
+            if (TryGetItemMemory(bot, list, out position))
+                return true;
+
             validRoomTypes ??= AllRoomTypes;
             position = new Vector3();
             var flag = false;
@@ -383,57 +388,64 @@ namespace Neuro_Plateup
             return flag;
         }
 
-        public bool FindNearestItem(ItemList list, Vector3 start, out Vector3 position, bool noHatches = true, HashSet<RoomType> validRoomTypes = null)
+        // public bool FindNearestItem(ItemList list, Vector3 start, out Vector3 position, bool noHatches = true, HashSet<RoomType> validRoomTypes = null)
+        // {
+        //     validRoomTypes ??= AllRoomTypes;
+        //     position = new Vector3();
+        //     var flag = false;
+        //     var currentSteps = int.MaxValue;
+        //     var Items = HeldItems.ToEntityArray(Allocator.Temp);
+        //     foreach (var item in Items)
+        //     {
+        //         var comp = GetComponent<CItem>(item);
+        //         if (comp.Items.IsEquivalent(list))
+        //         {
+        //             var holder = GetComponent<CHeldBy>(item).Holder;
+        //             if (HasComponent<CPlayer>(holder))
+        //                 continue;
+
+        //             var pos = GetComponent<CPosition>(holder).Position;
+        //             var tile = TileManager.GetTile(pos);
+        //             if (noHatches && MoveToSystem.Hatches.Contains(pos))
+        //             {
+        //                 continue;
+        //             }
+        //             else if (!validRoomTypes.Contains(tile.Type))
+        //             {
+        //                 continue;
+        //             }
+
+        //             if (moveTo.GetWaypoint(start, pos, out var wp, out var steps))
+        //             {
+        //                 if (steps < currentSteps)
+        //                 {
+        //                     currentSteps = steps;
+        //                     position = pos;
+        //                     flag = true;
+        //                 }
+        //             }
+        //             else if (steps == 0)
+        //             {
+        //                 position = pos;
+        //                 currentSteps = 0;
+        //                 flag = true;
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     Items.Dispose();
+        //     return flag;
+        // }
+
+        public bool FindNearestItem(Entity bot, HashSet<int> list, Vector3 start, HashSet<int> validAppliances, out Vector3 position, HashSet<RoomType> validRoomTypes = null)
         {
-            validRoomTypes ??= AllRoomTypes;
-            position = new Vector3();
-            var flag = false;
-            var currentSteps = int.MaxValue;
-            var Items = HeldItems.ToEntityArray(Allocator.Temp);
-            foreach (var item in Items)
+            if (TryGetItemMemory(bot, list, out position))
             {
-                var comp = GetComponent<CItem>(item);
-                if (comp.Items.IsEquivalent(list))
-                {
-                    var holder = GetComponent<CHeldBy>(item).Holder;
-                    if (HasComponent<CPlayer>(holder))
-                        continue;
-
-                    var pos = GetComponent<CPosition>(holder).Position;
-                    var tile = TileManager.GetTile(pos);
-                    if (noHatches && MoveToSystem.Hatches.Contains(pos))
-                    {
-                        continue;
-                    }
-                    else if (!validRoomTypes.Contains(tile.Type))
-                    {
-                        continue;
-                    }
-
-                    if (moveTo.GetWaypoint(start, pos, out var wp, out var steps))
-                    {
-                        if (steps < currentSteps)
-                        {
-                            currentSteps = steps;
-                            position = pos;
-                            flag = true;
-                        }
-                    }
-                    else if (steps == 0)
-                    {
-                        position = pos;
-                        currentSteps = 0;
-                        flag = true;
-                        break;
-                    }
-                }
+                var ent = TileManager.GetPrimaryOccupant(position);
+                if (validAppliances.Contains(GetComponent<CAppliance>(ent).ID))
+                    return true;
             }
-            Items.Dispose();
-            return flag;
-        }
 
-        public bool FindNearestItem(HashSet<int> list, Vector3 start, HashSet<int> validAppliances, out Vector3 position, HashSet<RoomType> validRoomTypes = null)
-        {
             validRoomTypes ??= AllRoomTypes;
             position = new Vector3();
             var flag = false;
@@ -526,84 +538,84 @@ namespace Neuro_Plateup
             return flag;
         }
 
-        private bool IsPresentOrHasProvider(Entity bot, int item)
-        {
-            var pos = GetComponent<CPosition>(bot).Position;
-            if (GetComponentOfHeld<CItem>(bot, out var cheld) && cheld.ID == item)
-            {
-                return true;
-            }
-            if (!FindNearestItem(new HashSet<int> { item }, pos, out var target, false, KitchenRoomTypes))
-            {
-                return Data.TryGet<Item>(item, out var itemData) && itemData.DedicatedProvider != null;
-            }
-            return true;
-        }
+        // private bool IsPresentOrHasProvider(Entity bot, int item)
+        // {
+        //     var pos = GetComponent<CPosition>(bot).Position;
+        //     if (GetComponentOfHeld<CItem>(bot, out var cheld) && cheld.ID == item)
+        //     {
+        //         return true;
+        //     }
+        //     if (!FindNearestItem(new HashSet<int> { item }, pos, out var target, false, KitchenRoomTypes))
+        //     {
+        //         return Data.TryGet<Item>(item, out var itemData) && itemData.DedicatedProvider != null;
+        //     }
+        //     return true;
+        // }
 
-        private bool FindItemAssembly(Entity bot, ItemList Items, out ItemList subItems, out Vector3 pos, out bool heldByBot)
-        {
-            pos = default(Vector3);
-            heldByBot = false;
-            subItems = new ItemList();
-            var ents = HeldItems.ToEntityArray(Allocator.Temp);
-            var currentLength = 1;
-            foreach (var ent in ents)
-            {
-                var holder = GetComponent<CHeldBy>(ent).Holder;
-                if (HasComponent<CPlayer>(holder) && holder != bot)
-                    continue;
+        // private bool FindItemAssembly(Entity bot, ItemList Items, out ItemList subItems, out Vector3 pos, out bool heldByBot)
+        // {
+        //     pos = default(Vector3);
+        //     heldByBot = false;
+        //     subItems = new ItemList();
+        //     var ents = HeldItems.ToEntityArray(Allocator.Temp);
+        //     var currentLength = 1;
+        //     foreach (var ent in ents)
+        //     {
+        //         var holder = GetComponent<CHeldBy>(ent).Holder;
+        //         if (HasComponent<CPlayer>(holder) && holder != bot)
+        //             continue;
 
-                var tile = TileManager.GetTile(GetComponent<CPosition>(holder).Position);
-                if (tile.Type != RoomType.Kitchen || MoveToSystem.Hatches.Contains(tile.Position))
-                    continue;
+        //         var tile = TileManager.GetTile(GetComponent<CPosition>(holder).Position);
+        //         if (tile.Type != RoomType.Kitchen || MoveToSystem.Hatches.Contains(tile.Position))
+        //             continue;
 
-                var comp = GetComponent<CItem>(ent);
-                if (comp.Items.Count <= Items.Count && comp.Items.Count > currentLength)
-                {
-                    var isSubItem = true;
-                    foreach (var item in comp.Items)
-                    {
-                        if (!Items.Contains(item))
-                        {
-                            isSubItem = false;
-                            break;
-                        }
-                    }
-                    if (isSubItem)
-                    {
-                        currentLength = comp.Items.Count;
-                        subItems = comp.Items;
-                        pos = tile.Position;
-                        heldByBot = holder == bot;
-                    }
-                }
-            }
-            ents.Dispose();
-            return subItems.Count > 0;
-        }
+        //         var comp = GetComponent<CItem>(ent);
+        //         if (comp.Items.Count <= Items.Count && comp.Items.Count > currentLength)
+        //         {
+        //             var isSubItem = true;
+        //             foreach (var item in comp.Items)
+        //             {
+        //                 if (!Items.Contains(item))
+        //                 {
+        //                     isSubItem = false;
+        //                     break;
+        //                 }
+        //             }
+        //             if (isSubItem)
+        //             {
+        //                 currentLength = comp.Items.Count;
+        //                 subItems = comp.Items;
+        //                 pos = tile.Position;
+        //                 heldByBot = holder == bot;
+        //             }
+        //         }
+        //     }
+        //     ents.Dispose();
+        //     return subItems.Count > 0;
+        // }
 
-        private void PickupItem(Entity bot, Vector3 pos, int itemID)
-        {
-            var itemData = Data.Get<Item>(itemID);
-            if (itemData.DedicatedProvider != null && GetNearestAppliance(pos, new HashSet<int> { itemData.DedicatedProvider.ID }, out var provider, out var applianceID))
-            {
-                if (applianceID == -1533430406)
-                {
-                    GetIcecream(bot, itemID);
-                }
-                else
-                {
-                    // Write a method that checks for plates
-                    EntityManager.AddComponentData(bot, new CMoveTo(provider));
-                    EntityManager.AddComponentData(bot, new CGrabAction(provider));
-                }
-            }
-            if (FindNearestItem(new HashSet<int> { itemID }, pos, out var target, false, KitchenRoomTypes))
-            {
-                EntityManager.AddComponentData(bot, new CMoveTo(target));
-                EntityManager.AddComponentData(bot, new CGrabAction(target));
-            }
-        }
+        // private void PickupItem(Entity bot, Vector3 pos, int itemID)
+        // {
+        //     var itemData = Data.Get<Item>(itemID);
+        //     if (itemData.DedicatedProvider != null && GetNearestAppliance(pos, new HashSet<int> { itemData.DedicatedProvider.ID }, out var provider, out var applianceID))
+        //     {
+        //         if (applianceID == -1533430406)
+        //         {
+        //             GetIcecream(bot, itemID);
+        //         }
+        //         else
+        //         {
+        //             // Write a method that checks for plates
+        //             EntityManager.AddComponentData(bot, new CMoveTo(provider));
+        //             EntityManager.AddComponentData(bot, new CGrabAction(provider));
+        //         }
+        //     }
+        //     if (FindNearestItem(new HashSet<int> { itemID }, pos, out var target, false, KitchenRoomTypes))
+        //     {
+        //         EntityManager.AddComponentData(bot, new CMoveTo(target));
+        //         EntityManager.AddComponentData(bot, new CGrabAction(target));
+        //     }
+        // }
 
         private void RemoveFromOrder(Entity bot, ItemInfo item)
         {
@@ -622,6 +634,101 @@ namespace Neuro_Plateup
                         break;
                     }
                 }
+            }
+        }
+
+        private void ClearItemMemory(Entity bot)
+        {
+            GetBuffer<CBotItems>(bot).Clear();
+        }
+
+        private void RemoveItemMemory(Entity bot, int itemID)
+        {
+            var itemMemory = GetBuffer<CBotItems>(bot);
+            for (var i = 0; i < itemMemory.Length; i++)
+            {
+                if (itemMemory[i].ID == itemID)
+                {
+                    itemMemory.RemoveAt(i);
+                    return;
+                }
+            }
+        }
+
+        private void AddItemMemory(Entity bot, int itemID, Vector3 pos)
+        {
+            GetBuffer<CBotItems>(bot).Add(new CBotItems(itemID, pos));
+        }
+
+        private bool TryGetItemMemory(Entity bot, int itemID, out Vector3 pos)
+        {
+            pos = new Vector3();
+            var itemMemory = GetBuffer<CBotItems>(bot);
+            var flag = false;
+            foreach (var entry in itemMemory)
+            {
+                if (entry.ID == itemID)
+                {
+                    var ent = TileManager.GetPrimaryOccupant(entry.Position);
+                    if (GetComponentOfHeld<CItem>(ent, out var comp) && comp.ID == entry.ID)
+                    {
+                        pos = entry.Position;
+                        return true;
+                    }
+                    else
+                    {
+                        flag = true;
+                        break;
+                    }
+                }
+            }
+
+            if (flag)
+                RemoveItemMemory(bot, itemID);
+
+            return false;
+        }
+
+        private bool TryGetItemMemory(Entity bot, HashSet<int> itemIDs, out Vector3 pos)
+        {
+            pos = new Vector3();
+            var itemMemory = GetBuffer<CBotItems>(bot);
+            var flag = false;
+            var markedForDeletion = new List<int>();
+            foreach (var entry in itemMemory)
+            {
+                if (itemIDs.Contains(entry.ID))
+                {
+                    var ent = TileManager.GetPrimaryOccupant(entry.Position);
+                    if (GetComponentOfHeld<CItem>(ent, out var comp) && comp.ID == entry.ID)
+                    {
+                        pos = entry.Position;
+                        flag = true;
+                        break;
+                    }
+                }
+            }
+            foreach (var i in markedForDeletion)
+            {
+                RemoveItemMemory(bot, i);
+            }
+            return flag;
+        }
+
+        private bool HobInteraction(Entity bot, Vector3 pos)
+        {
+            var ent = TileManager.GetPrimaryOccupant(pos);
+            if (HasComponent<CRequiresActivation>(ent) && !HasComponent<CIsInactive>(ent))
+            {
+                EntityManager.AddComponentData(bot, new CMoveTo(pos));
+                EntityManager.AddComponentData(bot, new CInteractAction(pos, false));
+                return false;
+            }
+            else
+            {
+                EntityManager.AddComponentData(bot, new CMoveTo(pos));
+                EntityManager.AddComponentData(bot, new CGrabAction(pos));
+                return true;
             }
         }
 
@@ -716,6 +823,10 @@ namespace Neuro_Plateup
 
         private void CoffeeFunction(Entity bot, List<ItemInfo> orders)
         {
+            // Coffee
+            // Iced Coffee
+            // Latte
+            // Affogato
 
         }
 
@@ -782,7 +893,172 @@ namespace Neuro_Plateup
 
         private void NutRoastFunction(Entity bot, List<ItemInfo> orders)
         {
+            var pos = GetComponent<CPosition>(bot).Position.Rounded();
 
+            if (GetComponentOfHeld<CItem>(bot, out var comp))
+            {
+                switch (comp.ID)
+                {
+                    case -1934880099: // plated nut roast
+                        {
+                            if (GetBestDropOff(pos, out var hatchPos))
+                            {
+                                EntityManager.AddComponentData(bot, new CMoveTo(hatchPos));
+                                EntityManager.AddComponentData(bot, new CGrabAction(hatchPos));
+                                RemoveFromOrder(bot, orders[0]);
+                                ClearItemMemory(bot); // just to be safe
+                            }
+                            else
+                            {
+                                Debug.LogError("No dropoff location free!");
+                            }
+                            break;
+                        }
+                    case -1945246136: // Nut Mixture - Baked
+                        {
+                            if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes))
+                            {
+                                EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                                EntityManager.AddComponentData(bot, new CGrabAction(counterPos));
+                            }
+                            break;
+                        }
+                    case -201067776: // Onion Raw
+                    case 609827370: // Nuts Raw
+                        {
+                            if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes))
+                            {
+                                EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                                EntityManager.AddComponentData(bot, new CGrabAction(counterPos));
+                                AddItemMemory(bot, comp.ID, counterPos);
+                            }
+                            break;
+                        }
+                    case -2100850612: // Chopped Nuts
+                        {
+                            if (FindNearestItem(bot, new HashSet<int> { -1252408744 }, pos, out var appliancePos, false, KitchenRoomTypes))
+                            {
+                                EntityManager.AddComponentData(bot, new CMoveTo(appliancePos));
+                                EntityManager.AddComponentData(bot, new CGrabAction(appliancePos));
+                                AddItemMemory(bot, -1515496760, appliancePos);
+                            }
+                            else
+                            {
+                                EmptyHands(bot);
+                            }
+                            RemoveItemMemory(bot, -1252408744);
+                            break;
+                        }
+                    case -1252408744: // Chopped Onion
+                        {
+                            if (FindNearestItem(bot, new HashSet<int> { -2100850612 }, pos, out var appliancePos, false, KitchenRoomTypes))
+                            {
+                                EntityManager.AddComponentData(bot, new CMoveTo(appliancePos));
+                                EntityManager.AddComponentData(bot, new CGrabAction(appliancePos));
+                                AddItemMemory(bot, -1515496760, appliancePos);
+                            }
+                            else
+                            {
+                                EmptyHands(bot);
+                            }
+                            RemoveItemMemory(bot, -2100850612);
+                            break;
+                        }
+                    case -1515496760: // Nut Mixture
+                        {
+                            if (GetNearestAppliance(pos, CookingAppliances, out var hobPos, out _, true, null, KitchenRoomTypes))
+                            {
+                                if (HobInteraction(bot, hobPos))
+                                    EntityManager.AddComponentData(bot, new CBotWaiting(hobPos, -1945246136));
+                            }
+                            else
+                            {
+                                Debug.LogError("No free cooking location!");
+                            }
+                            break;
+                        }
+                    case -1294491269: // Nut Mixture - Portion
+                        {
+                            if (GetNearestAppliance(pos, Plates, out var platePos, out _, null, null, KitchenRoomTypes))
+                            {
+                                EntityManager.AddComponentData(bot, new CMoveTo(platePos));
+                                EntityManager.AddComponentData(bot, new CGrabAction(platePos));
+                            }
+                            else
+                            {
+                                Debug.LogError("No filled plate holder found!");
+                            }
+                            break;
+                        }
+                    default:
+                        {
+                            EmptyHands(bot);
+                            break;
+                        }
+                }
+            }
+            else
+            {
+                if (FindNearestItem(bot, new HashSet<int> { -1945246136 }, pos, CookingAppliances, out var hobPos, KitchenRoomTypes))
+                {
+                    HobInteraction(bot, hobPos);
+                }
+                else if (FindNearestItem(bot, new HashSet<int> { -1294491269}, pos, out var slicePos, false, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(slicePos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(slicePos));
+                }
+                else if (FindNearestItem(bot, new HashSet<int> { -1945246136 }, pos, out var roastPos, false, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(roastPos));
+                    EntityManager.AddComponentData(bot, new CInteractAction(roastPos, true));
+                }
+                else if (FindNearestItem(bot, new HashSet<int> { -1294491269, -1515496760 }, pos, out var targetPos, false, KitchenRoomTypes))
+                {
+                    // Nut Mixture
+                    // Nut Mixture - Portion
+                    EntityManager.AddComponentData(bot, new CMoveTo(targetPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(targetPos));
+                    ClearItemMemory(bot);
+                }
+                else if (
+                    FindNearestItem(bot, new HashSet<int> { -2100850612 }, pos, out _, false, KitchenRoomTypes) &&
+                    FindNearestItem(bot, new HashSet<int> { -1252408744 }, pos, out var ingredientPos, false, KitchenRoomTypes)
+                    )
+                {
+                    // Nuts - Chopped
+                    // Onion - Chopped
+                    EntityManager.AddComponentData(bot, new CMoveTo(ingredientPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(ingredientPos));
+                    RemoveItemMemory(bot, -1252408744);
+                }
+                else if (TryGetItemMemory(bot, -201067776, out var onionPos))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(onionPos));
+                    EntityManager.AddComponentData(bot, new CInteractAction(onionPos, true));
+                    RemoveItemMemory(bot, -201067776);
+                    AddItemMemory(bot, -1252408744, onionPos);
+                }
+                else if (TryGetItemMemory(bot, 609827370, out var nutsPos))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(nutsPos));
+                    EntityManager.AddComponentData(bot, new CInteractAction(nutsPos, true));
+                    RemoveItemMemory(bot, 609827370);
+                    AddItemMemory(bot, -2100850612, onionPos);
+                }
+                else if (TryGetItemMemory(bot, -1252408744, out _))
+                {
+                    GetNearestAppliance(pos, new HashSet<int> { 1834063794 }, out var nutsSourcePos, out _, null, null, KitchenRoomTypes);
+                    EntityManager.AddComponentData(bot, new CMoveTo(nutsSourcePos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(nutsSourcePos));
+                }
+                else
+                {
+                    GetNearestAppliance(pos, new HashSet<int> { -2042103798 }, out var nutsSourcePos, out _, null, null, KitchenRoomTypes);
+                    EntityManager.AddComponentData(bot, new CMoveTo(nutsSourcePos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(nutsSourcePos));
+                }
+            }
         }
 
         private void PieFunction(Entity bot, List<ItemInfo> orders)
@@ -894,7 +1170,7 @@ namespace Neuro_Plateup
             }
             else
             {
-                if (GetNearestAppliance(pos, new HashSet<int> { itemInfo.DedicatedProvider.ID }, out var providerPos, out _, false, false, KitchenRoomTypes))
+                if (GetNearestAppliance(pos, new HashSet<int> { itemInfo.DedicatedProvider.ID }, out var providerPos, out _, null, null, KitchenRoomTypes))
                 {
                     EntityManager.AddComponentData(bot, new CMoveTo(providerPos));
                     EntityManager.AddComponentData(bot, new CGrabAction(providerPos));

@@ -148,6 +148,7 @@ namespace Neuro_Plateup
             EntityManager.RemoveComponent<CBotAction>(bot);
             EntityManager.RemoveComponent<CBotWaiting>(bot);
             EntityManager.RemoveComponent<CBotOrders>(bot);
+            GetBuffer<CBotItems>(bot).Clear();
         }
 
         private void BecomeChef(Entity bot, string payload)
@@ -631,7 +632,7 @@ namespace Neuro_Plateup
                 if (comp.ID == 793377380)
                 {
                     // clean plate
-                    if (cookingSystem.GetNearestAppliance(pos, CookingSystem.Plates, out var platePos, out var ID, false, true))
+                    if (cookingSystem.GetNearestAppliance(pos, CookingSystem.Plates, out var platePos, out var ID, null, true))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(platePos));
                         EntityManager.AddComponentData(bot, new CGrabAction(platePos));
@@ -665,7 +666,7 @@ namespace Neuro_Plateup
                 else if (comp.ID == -1955934157)
                 {
                     // bone
-                    if (!cookingSystem.GetNearestAppliance(pos, CookingSystem.Bins, out var binPos, out var ID, false, true))
+                    if (!cookingSystem.GetNearestAppliance(pos, CookingSystem.Bins, out var binPos, out var ID, null, true))
                     {
                         binPos = GetComponent<CPosition>(GetEntity<CApplianceExternalBin>());
                     }
@@ -675,7 +676,7 @@ namespace Neuro_Plateup
                 else if (comp.ID == -1527669626)
                 {
                     // plate with leftovers
-                    if (!cookingSystem.GetNearestAppliance(pos, CookingSystem.Bins, out var binPos, out var ID, false, true))
+                    if (!cookingSystem.GetNearestAppliance(pos, CookingSystem.Bins, out var binPos, out var ID, null, true))
                     {
                         binPos = GetComponent<CPosition>(GetEntity<CApplianceExternalBin>());
                     }
@@ -695,22 +696,22 @@ namespace Neuro_Plateup
                 EntityManager.AddComponentData(bot, new CMoveTo(washerPos));
                 EntityManager.AddComponentData(bot, new CInteractAction(washerPos, false));
             }
-            else if (cookingSystem.FindNearestItem(new HashSet<int> { 793377380 }, pos, CookingSystem.Sinks, out var sinkPos))
+            else if (cookingSystem.FindNearestItem(bot, new HashSet<int> { 793377380 }, pos, CookingSystem.Sinks, out var sinkPos))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(sinkPos));
                 EntityManager.AddComponentData(bot, new CGrabAction(sinkPos));
             }
-            else if (cookingSystem.FindNearestItem(new HashSet<int> { 1517992271 }, pos, CookingSystem.Sinks, out var sinkPos2))
+            else if (cookingSystem.FindNearestItem(bot, new HashSet<int> { 1517992271 }, pos, CookingSystem.Sinks, out var sinkPos2))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(sinkPos2));
                 EntityManager.AddComponentData(bot, new CInteractAction(sinkPos2, true));
             }
-            else if (cookingSystem.FindNearestItem(new HashSet<int> { 348289471 }, pos, out var bonePlatePos, false, CookingSystem.KitchenRoomTypes))
+            else if (cookingSystem.FindNearestItem(bot, new HashSet<int> { 348289471 }, pos, out var bonePlatePos, false, CookingSystem.KitchenRoomTypes))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(bonePlatePos));
                 EntityManager.AddComponentData(bot, new CInteractAction(bonePlatePos, true));
             }
-            else if (cookingSystem.FindNearestItem(new HashSet<int> { 1517992271, -1527669626 }, pos, out var dirtyPlatePos, false, CookingSystem.KitchenRoomTypes))
+            else if (cookingSystem.FindNearestItem(bot, new HashSet<int> { 1517992271, -1527669626 }, pos, out var dirtyPlatePos, false, CookingSystem.KitchenRoomTypes))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(dirtyPlatePos));
                 EntityManager.AddComponentData(bot, new CGrabAction(dirtyPlatePos));
@@ -754,7 +755,7 @@ namespace Neuro_Plateup
                     return;
                 }
             }
-            else if (cookingSystem.FindNearestItem(CookingSystem.DirtyPlates, pos, out var target, true, CookingSystem.NonKitchenRoomTypes))
+            else if (cookingSystem.FindNearestItem(bot, CookingSystem.DirtyPlates, pos, out var target, true, CookingSystem.NonKitchenRoomTypes))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(target));
                 EntityManager.AddComponentData(bot, new CGrabAction(target));
