@@ -205,6 +205,7 @@ namespace Neuro_Plateup
                 }
                 else
                 {
+                    // NYI: prevent switching type as we prepare the items
                     var buffer = GetBuffer<CBotOrders>(bot);
                     var list = new List<ItemInfo>();
 
@@ -243,8 +244,23 @@ namespace Neuro_Plateup
             // NYI?: preserving station
             return false;
         }
+        
+        private bool IsEmptyAppliance(Entity appliance)
+        {
+            if (Require<CApplianceBin>(appliance, out var compBin))
+            {
+                return compBin.CurrentAmount == 0;
+            }
+            else if (Require<CItemProvider>(appliance, out var compProvider))
+            {
+                return compProvider.Available == 0;
+            }
+            // NYI?: prep stations
+            // NYI?: preserving station
+            return false;
+        }
 
-        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool? onlyEmpty = null, bool? notFull = null, HashSet<RoomType> validRoomTypes = null)
+        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool? hasNoHeld = null, bool? checkFull = null, HashSet<RoomType> validRoomTypes = null)
         {
             validRoomTypes ??= AllRoomTypes;
             targetPos = new Vector3();
@@ -256,42 +272,42 @@ namespace Neuro_Plateup
             foreach (var appliance in Appliances)
             {
                 var ID = GetComponent<CAppliance>(appliance).ID;
-                if (onlyEmpty == true && GetComponentOfHeld<CItem>(appliance, out _))
+                if (hasNoHeld == GetComponentOfHeld<CItem>(appliance, out _))
                 {
                     continue;
                 }
-                if (notFull == true && IsFullAppliance(appliance))
+                if (checkFull == true && IsFullAppliance(appliance) || checkFull == false && !IsEmptyAppliance(appliance))
                 {
                     continue;
                 }
 
                 if (validAppliances.Contains(ID))
+                {
+                    var pos = GetComponent<CPosition>(appliance).Position;
+
+                    if (!validRoomTypes.Contains(TileManager.GetTile(pos).Type))
                     {
-                        var pos = GetComponent<CPosition>(appliance).Position;
+                        continue;
+                    }
 
-                        if (!validRoomTypes.Contains(TileManager.GetTile(pos).Type))
+                    if (moveTo.GetWaypoint(sourceTile, pos, out var wp, out var steps))
+                    {
+                        if (steps < currentSteps)
                         {
-                            continue;
-                        }
-
-                        if (moveTo.GetWaypoint(sourceTile, pos, out var wp, out var steps))
-                        {
-                            if (steps < currentSteps)
-                            {
-                                currentSteps = steps;
-                                flag = true;
-                                targetPos = pos;
-                                targetID = ID;
-                            }
-                        }
-                        else if (steps == 0)
-                        {
+                            currentSteps = steps;
                             flag = true;
                             targetPos = pos;
                             targetID = ID;
-                            break;
                         }
                     }
+                    else if (steps == 0)
+                    {
+                        flag = true;
+                        targetPos = pos;
+                        targetID = ID;
+                        break;
+                    }
+                }
             }
             Appliances.Dispose();
             return flag;
@@ -827,7 +843,115 @@ namespace Neuro_Plateup
             // Iced Coffee
             // Latte
             // Affogato
-
+            var pos = GetComponent<CPosition>(bot).Position.Rounded();
+            if (GetComponentOfHeld<CItem>(bot, out var comp))
+            {
+                if (orders[0].ID == comp.ID)
+                {
+                    if (GetBestDropOff(pos, out var dropPos))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(dropPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(dropPos));
+                        RemoveFromOrder(bot, orders[0]);
+                    }
+                    else if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
+                    {
+                        Debug.LogError("No hatch free, dropping on next free counter");
+                        EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(counterPos));
+                        RemoveFromOrder(bot, orders[0]);
+                    }
+                    else
+                    {
+                        Debug.LogError("No dropoff location free!");
+                    }
+                }
+                else if (comp.ID == 329108931 && GetNearestAppliance(pos, new HashSet<int> { -557736569 }, out var appliancePos, out _, true, null, KitchenRoomTypes))
+                {
+                    // Milk in hand and empty steamer
+                    EntityManager.AddComponentData(bot, new CMoveTo(appliancePos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(appliancePos));
+                }
+                else if (comp.ID == 364023067)
+                {
+                    if (GetNearestAppliance(pos, new HashSet<int> { -1609758240 }, out var coffeePos, out _, true, null, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(coffeePos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(coffeePos));
+                    }
+                    else
+                    {
+                        EmptyHands(bot);
+                    }
+                }
+                else if (comp.ID != -1293050650)
+                {
+                    EmptyHands(bot);
+                }
+                else if (orders[0].ID == -249136431)
+                {
+                    // Affogato
+                    GetIcecream(bot, 1570518340);
+                }
+                else if (orders[0].ID == 184647209)
+                {
+                    // Latte
+                    if (GetNearestAppliance(pos, new HashSet<int> { -557736569 }, out var milkPos, out _, null, null, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(milkPos));
+                        EntityManager.AddComponentData(bot, new CInteractAction(milkPos, false));
+                    }
+                    else
+                    {
+                        Debug.LogError("No Milk Steamer found!");
+                        EmptyHands(bot);
+                        RemoveFromOrder(bot, orders[0]);
+                    }
+                }
+                else
+                {
+                    // Iced Coffee
+                    if (GetNearestAppliance(pos, new HashSet<int> { 801015432 }, out var icePos, out _, null, null, KitchenRoomTypes))
+                    {
+                        // NYI: What if there is no ice in the machine?
+                        EntityManager.AddComponentData(bot, new CMoveTo(icePos));
+                        EntityManager.AddComponentData(bot, new CInteractAction(icePos, false));
+                    }
+                    else
+                    {
+                        Debug.LogError("No Ice Dispenser found!");
+                        EmptyHands(bot);
+                        RemoveFromOrder(bot, orders[0]);
+                    }
+                }
+            }
+            else
+            {
+                if (GetNearestAppliance(pos, new HashSet<int> { -1609758240 }, out var coffeePos, out _, true, null, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(coffeePos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(coffeePos));
+                }
+                else if (GetNearestAppliance(pos, new HashSet<int> { -557736569 }, out _, out _, null, false, KitchenRoomTypes))
+                {
+                    Debug.Log("Found empty steamer!");
+                    if (GetNearestAppliance(pos, new HashSet<int> { 120342736 }, out var milkPos, out _, null, null, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(milkPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(milkPos));
+                    }
+                    else
+                    {
+                        Debug.LogError("No Milk found in Kitchen!");
+                        RemoveFromOrder(bot, orders[0]);
+                    }
+                }
+                else if (FindNearestItem(bot, new HashSet<int> { -1293050650 }, pos, out var mugPos, true, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(mugPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(mugPos));
+                }
+            }
         }
 
         private void TeaFunction(Entity bot, List<ItemInfo> orders)
