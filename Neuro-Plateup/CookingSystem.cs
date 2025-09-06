@@ -215,9 +215,10 @@ namespace Neuro_Plateup
                     }
 
                     var groupedByFunction = list.GroupBy(s => MealFunctions[s.ID]);
-                    var maxGroup = groupedByFunction.OrderByDescending(g => g.Count()).First();
+                    var orderedByMethodName = groupedByFunction.OrderBy(g => g.Key.Method.Name);
+                    var firstGroup = orderedByMethodName.First();
 
-                    maxGroup.Key(bot, maxGroup.ToList());
+                    firstGroup.Key(bot, firstGroup.ToList());
                 }
             }
             Bots.Dispose();
@@ -370,14 +371,13 @@ namespace Neuro_Plateup
                         continue;
                     }
                     var tile = TileManager.GetTile(comp3.Position);
-                    if (MoveToSystem.Hatches.Contains(comp3.Position))
-                    {
-                        if (noHatches)
+                    var isHatch = MoveToSystem.Hatches.Contains(comp3.Position);
+
+                    if (noHatches && isHatch)
                         {
                             continue;
                         }
-                    }
-                    else if (!validRoomTypes.Contains(tile.Type))
+                    else if (!validRoomTypes.Contains(tile.Type) && !isHatch)
                     {
                         continue;
                     }
@@ -839,10 +839,6 @@ namespace Neuro_Plateup
 
         private void CoffeeFunction(Entity bot, List<ItemInfo> orders)
         {
-            // Coffee
-            // Iced Coffee
-            // Latte
-            // Affogato
             var pos = GetComponent<CPosition>(bot).Position.Rounded();
             if (GetComponentOfHeld<CItem>(bot, out var comp))
             {

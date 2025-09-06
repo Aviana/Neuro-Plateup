@@ -118,9 +118,10 @@ namespace Neuro_Plateup
                 {
                     if (feature.Type.IsDoor())
                     {
-                        if (IsBlocked(feature.Tile1) || IsBlocked(feature.Tile2))
+                        if (IsBlocked(feature.Tile1) ^ IsBlocked(feature.Tile2))
                         {
-                            Hatches.Add(feature.Tile1, feature.Tile2);
+                            if (TileManager.GetTile(feature.Tile1).Type == RoomType.Kitchen || TileManager.GetTile(feature.Tile2).Type == RoomType.Kitchen)
+                                Hatches.Add(feature.Tile1, feature.Tile2);
                         }
                         else
                         {
@@ -129,7 +130,8 @@ namespace Neuro_Plateup
                     }
                     else if (feature.Type == FeatureType.Hatch)
                     {
-                        Hatches.Add(feature.Tile1, feature.Tile2);
+                        if (!IsBlocked(feature.Tile1) || !IsBlocked(feature.Tile2))
+                            Hatches.Add(feature.Tile1, feature.Tile2);
                     }
                 }
 
@@ -143,7 +145,8 @@ namespace Neuro_Plateup
                         var TileTarget = TileManager.GetTile(target);
                         if (Tile1.RoomID != TileTarget.RoomID)
                         {
-                            additionalHatches.Add(new HashSet<Vector3> { target, hatch[0] });
+                            if (!IsBlocked(Tile1.Position) || !IsBlocked(TileTarget.Position))
+                                additionalHatches.Add(new HashSet<Vector3> { target, hatch[0] });
                         }
                     }
                     foreach (var target in GetSides(hatch[1], hatch[0]))
@@ -151,7 +154,8 @@ namespace Neuro_Plateup
                         var TileTarget = TileManager.GetTile(target);
                         if (Tile2.RoomID != TileTarget.RoomID)
                         {
-                            additionalHatches.Add(new HashSet<Vector3> { target, hatch[1] });
+                            if (!IsBlocked(Tile2.Position) || !IsBlocked(TileTarget.Position))
+                                additionalHatches.Add(new HashSet<Vector3> { target, hatch[1] });
                         }
                     }
                 }
