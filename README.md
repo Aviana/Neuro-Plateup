@@ -63,9 +63,9 @@ Those are:
 
 ## Credits
 
-dot_avi: basically everything in this repository
+- [dot_avi](https://github.com/Aviana): basically everything in this repository
 
 Thanks to:
-Vedal987: Creator of [Neuro-sama](https://www.twitch.tv/vedal987)
-Alexvoid: Creator of the [Neuro Game SDK](https://github.com/VedalAI/neuro-game-sdk)
-Pasu4,CoolCat467: The [Tony](https://github.com/Pasu4/neuro-api-tony) interface for debugging
+- Vedal987: Creator of [Neuro-sama](https://www.twitch.tv/vedal987)
+- [Alexvoid](https://github.com/Alexejhero): Creator of the [Neuro Game SDK](https://github.com/VedalAI/neuro-game-sdk)
+- [Pasu4](https://github.com/Pasu4), [CoolCat467](https://github.com/CoolCat467): The [Tony](https://github.com/Pasu4/neuro-api-tony) interface for debugging
