@@ -13,6 +13,7 @@ using System.Linq;
 
 namespace Neuro_Plateup
 {
+    [UpdateInGroup(typeof(SimulationSystemGroup), OrderLast = true)]
     public class ActionExecutor : GenericSystemBase, IModSystem
     {
         private EntityQuery BotQuery, ServiceQuery, OrderQuery, PatienceQuery, PlayerQuery, HeldItems, BinsQuery;
@@ -696,12 +697,12 @@ namespace Neuro_Plateup
                 EntityManager.AddComponentData(bot, new CMoveTo(washerPos));
                 EntityManager.AddComponentData(bot, new CInteractAction(washerPos, false));
             }
-            else if (cookingSystem.FindNearestItem(bot, new HashSet<int> { 793377380 }, pos, CookingSystem.Sinks, out var sinkPos))
+            else if (cookingSystem.FindNearestItem(bot, new HashSet<int> { 793377380 }, pos, out var sinkPos, false, CookingSystem.Sinks))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(sinkPos));
                 EntityManager.AddComponentData(bot, new CGrabAction(sinkPos));
             }
-            else if (cookingSystem.FindNearestItem(bot, new HashSet<int> { 1517992271 }, pos, CookingSystem.Sinks, out var sinkPos2))
+            else if (cookingSystem.FindNearestItem(bot, new HashSet<int> { 1517992271 }, pos, out var sinkPos2, false, CookingSystem.Sinks))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(sinkPos2));
                 EntityManager.AddComponentData(bot, new CInteractAction(sinkPos2, true));

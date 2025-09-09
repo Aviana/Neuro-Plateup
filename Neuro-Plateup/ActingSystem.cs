@@ -8,8 +8,7 @@ using System.Collections.Generic;
 
 namespace Neuro_Plateup
 {
-    [UpdateAfter(typeof(ActionExecutor))]
-    [UpdateAfter(typeof(CookingSystem))]
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class ActingSystem : GenericSystemBase, IModSystem
     {
         private EntityQuery BotQuery, InputCapturesQuery, LookingQuery, InteractionQuery, AttemptQuery;

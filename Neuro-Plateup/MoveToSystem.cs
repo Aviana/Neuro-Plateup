@@ -9,6 +9,7 @@ using Kitchen.Layouts;
 
 namespace Neuro_Plateup
 {
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class MoveToSystem : GenericSystemBase, IModSystem
     {
         private EntityQuery BotQuery, InputCapturesQuery, LayoutQuery, LayoutResetQuery;

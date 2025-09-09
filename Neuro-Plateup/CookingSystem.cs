@@ -11,6 +11,7 @@ using System.Linq;
 
 namespace Neuro_Plateup
 {
+    [UpdateInGroup(typeof(SimulationSystemGroup), OrderLast = true)]
     public class CookingSystem : GenericSystemBase, IModSystem
     {
         private EntityQuery BotQuery, HeldItems, ResetQuery;
@@ -19,7 +20,7 @@ namespace Neuro_Plateup
 
         private static Dictionary<int, Action<Entity, List<ItemInfo>>> MealFunctions;
 
-        public static HashSet<int> CookingAppliances, DishWashers, Sinks, Bins, Counters, WaterProviders, Plates, Tables, DirtyPlates, Trash;
+        public static HashSet<int> CookingAppliances, DishWashers, Sinks, Bins, Counters, WaterProviders, Plates, Tables, DirtyPlates, Trash, NoAppliances;
 
         public static Dictionary<int, Vector3> ServeProviders = new Dictionary<int, Vector3>();
 
@@ -101,6 +102,7 @@ namespace Neuro_Plateup
             Tables = new HashSet<int> { 209074140, -3721951, -34659638, -203679687, -2019409936 };
             DirtyPlates = new HashSet<int> { 1517992271, -1527669626, 348289471 };
             Trash = new HashSet<int> { 1075166571, -1724190260, -1960690485, -263299406, -1063655063, 936242560, 320607572, 958173724, 469714996, 1770849684, -1755371377, -1140210773, -1370587045, 390623838, -1427780146, -1176063723, -1628910037, -106588634 };
+            NoAppliances = new HashSet<int>();
 
             MealFunctions = new Dictionary<int, Action<Entity, List<ItemInfo>>>
             {
@@ -349,6 +351,126 @@ namespace Neuro_Plateup
             return flag;
         }
 
+        public bool FindNearestItem(ItemInfo item, Vector3 start, out Vector3 position, bool noHatches = true, HashSet<RoomType> validRoomTypes = null)
+        {
+            validRoomTypes ??= AllRoomTypes;
+            position = new Vector3();
+            var flag = false;
+            var currentSteps = int.MaxValue;
+            var Items = HeldItems.ToEntityArray(Allocator.Temp);
+            foreach (var i in Items)
+            {
+                if (Require<CItem>(i, out var comp) && item == comp)
+                {
+                    if (!Require<CHeldBy>(i, out var comp2) || HasComponent<CPlayer>(comp2.Holder))
+                    {
+                        continue;
+                    }
+
+                    if (!Require<CPosition>(comp2.Holder, out var comp3))
+                    {
+                        continue;
+                    }
+                    var tile = TileManager.GetTile(comp3.Position);
+                    var isHatch = MoveToSystem.Hatches.Contains(comp3.Position);
+
+                    if (noHatches && isHatch)
+                    {
+                        continue;
+                    }
+                    else if (!validRoomTypes.Contains(tile.Type) && !isHatch)
+                    {
+                        continue;
+                    }
+
+                    if (moveTo.GetWaypoint(start, comp3.Position, out var wp, out var steps))
+                    {
+                        if (steps < currentSteps)
+                        {
+                            currentSteps = steps;
+                            position = comp3.Position;
+                            flag = true;
+                        }
+                    }
+                    else if (steps == 0)
+                    {
+                        position = comp3.Position;
+                        currentSteps = 0;
+                        flag = true;
+                        break;
+                    }
+                }
+            }
+            Items.Dispose();
+            return flag;
+        }
+
+        public bool FindNearestItem(ItemInfo item, Vector3 start, out Vector3 position, bool noHatches = true, HashSet<int> validAppliances = null, HashSet<int> invalidAppliances = null, HashSet<RoomType> validRoomTypes = null)
+        {
+            validAppliances ??= NoAppliances;
+            invalidAppliances ??= NoAppliances;
+            validRoomTypes ??= AllRoomTypes;
+            position = new Vector3();
+            var flag = false;
+            var currentSteps = int.MaxValue;
+            var Items = HeldItems.ToEntityArray(Allocator.Temp);
+            foreach (var i in Items)
+            {
+                if (Require<CItem>(i, out var comp) && item == comp)
+                {
+                    if (!Require<CHeldBy>(i, out var comp2) || HasComponent<CPlayer>(comp2.Holder))
+                    {
+                        continue;
+                    }
+
+                    if (!Require<CAppliance>(comp2.Holder, out var comp3) || validAppliances.Count > 0 && !validAppliances.Contains(comp3.ID) || invalidAppliances.Contains(comp3.ID))
+                    {
+                        continue;
+                    }
+
+                    if (!Require<CPosition>(comp2.Holder, out var comp4))
+                    {
+                        continue;
+                    }
+                    if (!validRoomTypes.Contains(TileManager.GetTile(comp4.Position).Type))
+                    {
+                        continue;
+                    }
+
+                    var tile = TileManager.GetTile(comp4.Position);
+                    var isHatch = MoveToSystem.Hatches.Contains(comp4.Position);
+
+                    if (noHatches && isHatch)
+                    {
+                        continue;
+                    }
+                    else if (!validRoomTypes.Contains(tile.Type) && !isHatch)
+                    {
+                        continue;
+                    }
+
+                    if (moveTo.GetWaypoint(start, comp4.Position, out var wp, out var steps))
+                    {
+                        if (steps < currentSteps)
+                        {
+                            currentSteps = steps;
+                            position = comp4.Position;
+                            flag = true;
+                        }
+                    }
+                    else if (steps == 0)
+                    {
+                        position = comp4.Position;
+                        currentSteps = 0;
+                        flag = true;
+                        break;
+                    }
+                }
+            }
+            Items.Dispose();
+            return flag;
+        }
+
         public bool FindNearestItem(Entity bot, HashSet<int> list, Vector3 start, out Vector3 position, bool noHatches = true, HashSet<RoomType> validRoomTypes = null)
         {
             if (TryGetItemMemory(bot, list, out position))
@@ -406,7 +528,7 @@ namespace Neuro_Plateup
             return flag;
         }
 
-        public bool FindNearestItem(Entity bot, HashSet<int> list, Vector3 start, HashSet<int> validAppliances, out Vector3 position, HashSet<RoomType> validRoomTypes = null)
+        public bool FindNearestItem(Entity bot, HashSet<int> list, Vector3 start, out Vector3 position, bool noHatches = true, HashSet<int> validAppliances = null, HashSet<int> invalidAppliances = null, HashSet<RoomType> validRoomTypes = null)
         {
             if (TryGetItemMemory(bot, list, out position))
             {
@@ -415,6 +537,8 @@ namespace Neuro_Plateup
                     return true;
             }
 
+            validAppliances ??= NoAppliances;
+            invalidAppliances ??= NoAppliances;
             validRoomTypes ??= AllRoomTypes;
             position = new Vector3();
             var flag = false;
@@ -429,7 +553,7 @@ namespace Neuro_Plateup
                         continue;
                     }
 
-                    if (!Require<CAppliance>(comp2.Holder, out var comp3) || !validAppliances.Contains(comp3.ID))
+                    if (!Require<CAppliance>(comp2.Holder, out var comp3) || validAppliances.Count > 0 && !validAppliances.Contains(comp3.ID) || invalidAppliances.Contains(comp3.ID))
                     {
                         continue;
                     }
@@ -438,7 +562,15 @@ namespace Neuro_Plateup
                     {
                         continue;
                     }
-                    if (!validRoomTypes.Contains(TileManager.GetTile(comp4.Position).Type))
+
+                    var tile = TileManager.GetTile(comp4.Position);
+                    var isHatch = MoveToSystem.Hatches.Contains(comp4.Position);
+
+                    if (noHatches && isHatch)
+                    {
+                        continue;
+                    }
+                    else if (!validRoomTypes.Contains(tile.Type) && !isHatch)
                     {
                         continue;
                     }
@@ -1091,7 +1223,7 @@ namespace Neuro_Plateup
             }
             else
             {
-                if (FindNearestItem(bot, new HashSet<int> { -1945246136 }, pos, CookingAppliances, out var hobPos, KitchenRoomTypes))
+                if (FindNearestItem(bot, new HashSet<int> { -1945246136 }, pos, out var hobPos, false, CookingAppliances, NoAppliances, KitchenRoomTypes))
                 {
                     HobInteraction(bot, hobPos);
                 }

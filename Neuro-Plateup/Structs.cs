@@ -139,13 +139,6 @@ namespace Neuro_Plateup
         public readonly IEnumerator<ItemInfo> GetValues() => Items.GetEnumerator();
     }
 
-    public struct ItemCreationProcess
-    {
-        public int ID;
-        public HashSet<int> itemIDs;
-        public HashSet<int> Appliances;
-    }
-
     public struct ItemInfo
     {
         public int ID;
@@ -161,6 +154,14 @@ namespace Neuro_Plateup
         {
             ID = id;
             Items = new FixedListInt64 { id };
+        }
+
+        public ItemInfo(int id, params int[] items)
+        {
+            ID = id;
+            Items = new FixedListInt64 { id };
+            foreach (var item in items)
+                Items.Add(item);
         }
 
         public static bool operator ==(ItemInfo a, CItem b)
