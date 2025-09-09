@@ -331,7 +331,7 @@ namespace Neuro_Plateup
         {
             Vector3 direction = to - from;
 
-            Vector3 left  = new Vector3(-direction.z, 0, direction.x);
+            Vector3 left = new Vector3(-direction.z, 0, direction.x);
             Vector3 right = -left;
 
             return new List<Vector3>
