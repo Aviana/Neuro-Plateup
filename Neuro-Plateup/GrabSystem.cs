@@ -8,11 +8,13 @@ using System.Collections.Generic;
 
 namespace Neuro_Plateup
 {
+    [UpdateAfter(typeof(ActionExecutor))]
+    [UpdateAfter(typeof(CookingSystem))]
     public class GrabSystem : GenericSystemBase, IModSystem
     {
         private EntityQuery BotQuery, InputCapturesQuery;
         private FakeInput input;
-        private static readonly Dictionary<int, int> grabInfo = new Dictionary<int, int> { {1, 0}, {2, 0}, {3, 0}, {4, 0}};
+        private static readonly Dictionary<int, int> grabInfo = new Dictionary<int, int> { { 1, 0 }, { 2, 0 }, { 3, 0 }, { 4, 0 } };
 
         protected override void Initialise()
         {
@@ -51,15 +53,6 @@ namespace Neuro_Plateup
                 evt.User = ID;
                 var comp = GetComponent<CGrabAction>(bot);
                 var appliance = TileManager.GetPrimaryOccupant(comp.Position);
-
-                // if (Require<CBeingGrabbed>(appliance, out var comp2))
-                // {
-                //     if (comp2.Interactor == bot)
-                //     {
-                //         EntityManager.RemoveComponent<CGrabAction>(bot);
-                //         continue;
-                //     }
-                // }
 
                 if (Require<CAttemptingInteraction>(bot, out var comp3) && comp3.Target == appliance)
                 {

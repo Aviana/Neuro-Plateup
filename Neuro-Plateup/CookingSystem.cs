@@ -930,7 +930,6 @@ namespace Neuro_Plateup
                 }
                 else if (GetNearestAppliance(pos, new HashSet<int> { -557736569 }, out _, out _, null, false, KitchenRoomTypes))
                 {
-                    Debug.Log("Found empty steamer!");
                     if (GetNearestAppliance(pos, new HashSet<int> { 120342736 }, out var milkPos, out _, null, null, KitchenRoomTypes))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(milkPos));
@@ -1123,7 +1122,7 @@ namespace Neuro_Plateup
                 {
                     HobInteraction(bot, hobPos);
                 }
-                else if (FindNearestItem(bot, new HashSet<int> { -1294491269}, pos, out var slicePos, false, KitchenRoomTypes))
+                else if (FindNearestItem(bot, new HashSet<int> { -1294491269 }, pos, out var slicePos, false, KitchenRoomTypes))
                 {
                     EntityManager.AddComponentData(bot, new CMoveTo(slicePos));
                     EntityManager.AddComponentData(bot, new CGrabAction(slicePos));
@@ -1152,31 +1151,33 @@ namespace Neuro_Plateup
                     EntityManager.AddComponentData(bot, new CGrabAction(ingredientPos));
                     RemoveItemMemory(bot, -1252408744);
                 }
-                else if (TryGetItemMemory(bot, -201067776, out var onionPos))
+                else if (FindNearestItem(bot, new HashSet<int> { -201067776 }, pos, out var onionPos, false, KitchenRoomTypes))
                 {
                     EntityManager.AddComponentData(bot, new CMoveTo(onionPos));
                     EntityManager.AddComponentData(bot, new CInteractAction(onionPos, true));
                     RemoveItemMemory(bot, -201067776);
                     AddItemMemory(bot, -1252408744, onionPos);
                 }
-                else if (TryGetItemMemory(bot, 609827370, out var nutsPos))
+                else if (FindNearestItem(bot, new HashSet<int> { 609827370 }, pos, out var nutsPos, false, KitchenRoomTypes))
                 {
                     EntityManager.AddComponentData(bot, new CMoveTo(nutsPos));
                     EntityManager.AddComponentData(bot, new CInteractAction(nutsPos, true));
                     RemoveItemMemory(bot, 609827370);
-                    AddItemMemory(bot, -2100850612, onionPos);
+                    AddItemMemory(bot, -2100850612, nutsPos);
                 }
-                else if (TryGetItemMemory(bot, -1252408744, out _))
+                else if (!TryGetItemMemory(bot, -2100850612, out _)) // Nuts chopped
                 {
                     GetNearestAppliance(pos, new HashSet<int> { 1834063794 }, out var nutsSourcePos, out _, null, null, KitchenRoomTypes);
                     EntityManager.AddComponentData(bot, new CMoveTo(nutsSourcePos));
                     EntityManager.AddComponentData(bot, new CGrabAction(nutsSourcePos));
+                    AddItemMemory(bot, 609827370, nutsSourcePos);
                 }
                 else
                 {
-                    GetNearestAppliance(pos, new HashSet<int> { -2042103798 }, out var nutsSourcePos, out _, null, null, KitchenRoomTypes);
-                    EntityManager.AddComponentData(bot, new CMoveTo(nutsSourcePos));
-                    EntityManager.AddComponentData(bot, new CGrabAction(nutsSourcePos));
+                    GetNearestAppliance(pos, new HashSet<int> { -2042103798 }, out var onionSourcePos, out _, null, null, KitchenRoomTypes);
+                    EntityManager.AddComponentData(bot, new CMoveTo(onionSourcePos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(onionSourcePos));
+                    AddItemMemory(bot, -201067776, onionSourcePos);
                 }
             }
         }

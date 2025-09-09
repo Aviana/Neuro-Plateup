@@ -157,6 +157,12 @@ namespace Neuro_Plateup
             Items = list;
         }
 
+        public ItemInfo(int id)
+        {
+            ID = id;
+            Items = new FixedListInt64 { id };
+        }
+
         public static bool operator ==(ItemInfo a, CItem b)
         {
             if (a.ID != b.ID)

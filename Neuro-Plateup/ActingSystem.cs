@@ -8,11 +8,13 @@ using System.Collections.Generic;
 
 namespace Neuro_Plateup
 {
-    public class InteractionSystem : GenericSystemBase, IModSystem
+    [UpdateAfter(typeof(ActionExecutor))]
+    [UpdateAfter(typeof(CookingSystem))]
+    public class ActingSystem : GenericSystemBase, IModSystem
     {
         private EntityQuery BotQuery, InputCapturesQuery, LookingQuery, InteractionQuery, AttemptQuery;
         private FakeInput input;
-        private static readonly Dictionary<int, bool> barInfo = new Dictionary<int, bool>();
+        private static readonly Dictionary<int, float> barInfo = new Dictionary<int, float>();
 
         protected override void Initialise()
         {
@@ -41,6 +43,11 @@ namespace Neuro_Plateup
             InteractionQuery = GetEntityQuery(typeof(CProgressIndicator));
             AttemptQuery = GetEntityQuery(typeof(CAttemptingInteraction));
             input = new FakeInput();
+
+            for (var i = 1; i <= 4; i++)
+            {
+                barInfo.Add(i, 0f);
+            }
         }
 
         protected override void OnUpdate()
@@ -56,12 +63,11 @@ namespace Neuro_Plateup
                 var ID = GetComponent<CPlayer>(bot).ID;
                 evt.User = ID;
                 var comp = GetComponent<CInteractAction>(bot);
-                var hasBar = PositionHasProgressBar(comp.Position);
-                var hadBar = barInfo.ContainsKey(ID) && barInfo[ID];
+                var currentProgress = GetProgress(comp.Position);
                 var appliance = TileManager.GetPrimaryOccupant(comp.Position);
                 var pos = GetComponent<CPosition>(bot).Position;
 
-                if ((!comp.HasProgress || hadBar && !hasBar) && Require<CBeingActedOnBy>(appliance, out var buffer))
+                if ((!comp.HasProgress || currentProgress < barInfo[ID] && barInfo[ID] > 0.05f) && Require<CBeingActedOnBy>(appliance, out var buffer))
                 {
                     var flag = false;
                     foreach (var entry in buffer)
@@ -75,7 +81,7 @@ namespace Neuro_Plateup
                     if (flag)
                     {
                         EntityManager.RemoveComponent<CInteractAction>(bot);
-                        barInfo[ID] = false;
+                        barInfo[ID] = 0f;
                         evt.State.InteractAction = ButtonState.Released;
                         input.Send(evt);
                         continue;
@@ -139,25 +145,26 @@ namespace Neuro_Plateup
                     }
                 }
                 input.Send(evt);
-                barInfo[ID] = hasBar;
+                barInfo[ID] = currentProgress;
             }
             BotEntities.Dispose();
         }
 
-        protected bool PositionHasProgressBar(Vector3 pos)
+        protected float GetProgress(Vector3 pos)
         {
+            var fProgress = 0f;
             var Interactions = InteractionQuery.ToEntityArray(Allocator.Temp);
             foreach (var interaction in Interactions)
             {
                 var p = GetComponent<CPosition>(interaction).Position;
                 if (p == pos)
                 {
-                    Interactions.Dispose();
-                    return true;
+                    fProgress = GetComponent<CProgressIndicator>(interaction).Progress;
+                    break;
                 }
             }
             Interactions.Dispose();
-            return false;
+            return fProgress;
         }
     }
 }
