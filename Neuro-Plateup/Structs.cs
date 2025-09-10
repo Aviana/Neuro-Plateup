@@ -159,7 +159,7 @@ namespace Neuro_Plateup
         public ItemInfo(int id, params int[] items)
         {
             ID = id;
-            Items = new FixedListInt64 { id };
+            Items = new FixedListInt64();
             foreach (var item in items)
                 Items.Add(item);
         }

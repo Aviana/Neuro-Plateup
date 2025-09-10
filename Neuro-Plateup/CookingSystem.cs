@@ -64,6 +64,15 @@ namespace Neuro_Plateup
             RoomType.Kitchen
         };
 
+        public enum FillStateCheck
+        {
+            Ignore,
+            IsEmpty,
+            IsNotEmpty,
+            IsFull,
+            IsNotFull,
+        };
+
         protected override void Initialise()
         {
             base.Initialise();
@@ -235,38 +244,30 @@ namespace Neuro_Plateup
             EntityManager.AddComponent<CReturnItem>(GetComponent<CItemHolder>(bot).HeldItem);
         }
 
-        private bool IsFullAppliance(Entity appliance)
+        private bool ApplianceCapacity(Entity appliance, out int current, out int maximum)
         {
             if (Require<CApplianceBin>(appliance, out var compBin))
             {
-                return compBin.CurrentAmount == compBin.Capacity;
+                current = compBin.CurrentAmount;
+                maximum = compBin.Capacity;
+                return true;
             }
             else if (Require<CItemProvider>(appliance, out var compProvider))
             {
-                return compProvider.Available == compProvider.Maximum;
+                current = compProvider.Available;
+                maximum = compProvider.Maximum;
+                return true;
             }
             // NYI?: prep stations
             // NYI?: preserving station
-            return false;
-        }
-        
-        private bool IsEmptyAppliance(Entity appliance)
-        {
-            if (Require<CApplianceBin>(appliance, out var compBin))
-            {
-                return compBin.CurrentAmount == 0;
-            }
-            else if (Require<CItemProvider>(appliance, out var compProvider))
-            {
-                return compProvider.Available == 0;
-            }
-            // NYI?: prep stations
-            // NYI?: preserving station
+            current = 0;
+            maximum = 0;
             return false;
         }
 
-        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool? hasNoHeld = null, bool? checkFull = null, HashSet<RoomType> validRoomTypes = null)
+        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool? hasNoHeld = null, FillStateCheck? fillState = null, HashSet<RoomType> validRoomTypes = null)
         {
+            fillState ??= FillStateCheck.Ignore;
             validRoomTypes ??= AllRoomTypes;
             targetPos = new Vector3();
             targetID = new int();
@@ -281,9 +282,29 @@ namespace Neuro_Plateup
                 {
                     continue;
                 }
-                if (checkFull == true && IsFullAppliance(appliance) || checkFull == false && !IsEmptyAppliance(appliance))
+                if (fillState != FillStateCheck.Ignore && ApplianceCapacity(appliance, out var current, out var maximum))
                 {
-                    continue;
+                    switch (fillState)
+                    {
+                        case FillStateCheck.IsEmpty:
+                            if (current != 0)
+                                continue;
+                            break;
+                        case FillStateCheck.IsFull:
+                            if (current != maximum)
+                                continue;
+                            break;
+                        case FillStateCheck.IsNotEmpty:
+                            if (current == 0)
+                                continue;
+                            break;
+                        case FillStateCheck.IsNotFull:
+                            if (current == maximum)
+                                continue;
+                            break;
+                        default:
+                            break;
+                    }
                 }
 
                 if (validAppliances.Contains(ID))
@@ -1033,7 +1054,7 @@ namespace Neuro_Plateup
                     EntityManager.AddComponentData(bot, new CMoveTo(coffeePos));
                     EntityManager.AddComponentData(bot, new CGrabAction(coffeePos));
                 }
-                else if (GetNearestAppliance(pos, new HashSet<int> { -557736569 }, out _, out _, null, false, KitchenRoomTypes))
+                else if (GetNearestAppliance(pos, new HashSet<int> { -557736569 }, out _, out _, null, FillStateCheck.IsEmpty, KitchenRoomTypes))
                 {
                     if (GetNearestAppliance(pos, new HashSet<int> { 120342736 }, out var milkPos, out _, null, null, KitchenRoomTypes))
                     {
@@ -1203,7 +1224,7 @@ namespace Neuro_Plateup
                         }
                     case -1294491269: // Nut Mixture - Portion
                         {
-                            if (GetNearestAppliance(pos, Plates, out var platePos, out _, null, null, KitchenRoomTypes))
+                            if (GetNearestAppliance(pos, Plates, out var platePos, out _, null, FillStateCheck.IsNotEmpty, KitchenRoomTypes))
                             {
                                 EntityManager.AddComponentData(bot, new CMoveTo(platePos));
                                 EntityManager.AddComponentData(bot, new CGrabAction(platePos));

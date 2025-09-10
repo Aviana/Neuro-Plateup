@@ -633,7 +633,7 @@ namespace Neuro_Plateup
                 if (comp.ID == 793377380)
                 {
                     // clean plate
-                    if (cookingSystem.GetNearestAppliance(pos, CookingSystem.Plates, out var platePos, out var ID, null, true))
+                    if (cookingSystem.GetNearestAppliance(pos, CookingSystem.Plates, out var platePos, out var ID, null, CookingSystem.FillStateCheck.IsNotFull))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(platePos));
                         EntityManager.AddComponentData(bot, new CGrabAction(platePos));
@@ -667,7 +667,7 @@ namespace Neuro_Plateup
                 else if (comp.ID == -1955934157)
                 {
                     // bone
-                    if (!cookingSystem.GetNearestAppliance(pos, CookingSystem.Bins, out var binPos, out var ID, null, true))
+                    if (!cookingSystem.GetNearestAppliance(pos, CookingSystem.Bins, out var binPos, out var ID, null, CookingSystem.FillStateCheck.IsNotFull))
                     {
                         binPos = GetComponent<CPosition>(GetEntity<CApplianceExternalBin>());
                     }
@@ -677,7 +677,7 @@ namespace Neuro_Plateup
                 else if (comp.ID == -1527669626)
                 {
                     // plate with leftovers
-                    if (!cookingSystem.GetNearestAppliance(pos, CookingSystem.Bins, out var binPos, out var ID, null, true))
+                    if (!cookingSystem.GetNearestAppliance(pos, CookingSystem.Bins, out var binPos, out var ID, null, CookingSystem.FillStateCheck.IsNotFull))
                     {
                         binPos = GetComponent<CPosition>(GetEntity<CApplianceExternalBin>());
                     }
