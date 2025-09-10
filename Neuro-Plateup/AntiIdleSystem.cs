@@ -48,6 +48,16 @@ namespace Neuro_Plateup
             var released = new InputUpdateEvent();
             var pressed = new InputUpdateEvent();
             pressed.State.SecondaryAction1 = ButtonState.Pressed;
+            pressed.State.MenuSelect = ButtonState.Pressed;
+
+            var BotEntities = IdleBotQuery.ToEntityArray(Allocator.Temp);
+            foreach (var bot in BotEntities)
+            {
+                released.User = GetComponent<CPlayer>(bot).ID;
+                input.Send(released);
+            }
+            BotEntities.Dispose();
+
             if (!PopupQuery.IsEmptyIgnoreFilter)
             {
                 IObjectView view = null;
@@ -74,11 +84,9 @@ namespace Neuro_Plateup
                         var ID = GetComponent<CPlayer>(bot).ID;
                         if (!Consent.GetConsent(ID))
                         {
-                            // NYI: Check if this works in network mode
-                            Consent.SetConsent(ID, true);
+                            pressed.User = ID;
+                            input.Send(pressed);
                         }
-                        released.User = ID;
-                        input.Send(released);
                     }
                 }
                 else if (view is StartDayWarningView)
@@ -91,11 +99,9 @@ namespace Neuro_Plateup
                         var ID = GetComponent<CPlayer>(bot).ID;
                         if (!Consent.GetConsent(ID))
                         {
-                            // NYI: Check if this works in network mode
-                            Consent.SetConsent(ID, true);
+                            pressed.User = ID;
+                            input.Send(pressed);
                         }
-                        released.User = ID;
-                        input.Send(released);
                     }
                 }
                 else if (view is EndPracticeView)
@@ -107,39 +113,13 @@ namespace Neuro_Plateup
                         var ID = GetComponent<CPlayer>(bot).ID;
                         if (!Consents.Contains(ID))
                         {
-                            // NYI: Check if this works in network mode
-                            Consents.Add(ID);
+                            pressed.User = ID;
+                            input.Send(pressed);
                         }
-                        else
-                        {
-                            released.User = ID;
-                            input.Send(released);
-                        }
-                    }
-                }
-                else
-                {
-                    foreach (var bot in Bots)
-                    {
-                        var ID = GetComponent<CPlayer>(bot).ID;
-                        released.User = ID;
-                        input.Send(released);
                     }
                 }
                 Bots.Dispose();
-                return;
             }
-
-            if (IdleBotQuery.IsEmptyIgnoreFilter)
-                return;
-
-            var BotEntities = IdleBotQuery.ToEntityArray(Allocator.Temp);
-            foreach (var bot in BotEntities)
-            {
-                released.User = GetComponent<CPlayer>(bot).ID;
-                input.Send(released);
-            }
-            BotEntities.Dispose();
         }
     }
 }

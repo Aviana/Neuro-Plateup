@@ -476,8 +476,11 @@ namespace Neuro_Plateup
 
         public bool HasCardSelection(Entity bot)
         {
-            // NYI: Single card selection
             if (UnlockQuery.IsEmptyIgnoreFilter)
+                return false;
+
+            var buffer = GetBuffer<CUnlockSelectPopupOption>(UnlockQuery.GetSingletonEntity());
+            if (buffer[1].ID == 0)
                 return false;
 
             return true;
