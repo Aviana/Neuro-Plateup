@@ -955,7 +955,297 @@ namespace Neuro_Plateup
 
         private void PizzaFunction(Entity bot, List<ItemInfo> orders)
         {
+            int pizzaType;
+            if (orders[0].Items.Contains(-336580972))
+                pizzaType = -2093899333; // Mushroom
+            else if (orders[0].Items.Contains(-1633089577))
+                pizzaType = -1252408744; // Onion
+            else
+                pizzaType = 263830100; // Plain
 
+            var baked = orders[0].Items;
+            baked.Remove(793377380);
+
+            var unbaked = new FixedListInt64 { 263830100, -48499881, -1317168923 };
+            if (pizzaType != 263830100)
+                unbaked.Add(pizzaType);
+
+            var pos = GetComponent<CPosition>(bot).Position.Rounded();
+            if (GetComponentOfHeld<CItem>(bot, out var comp))
+            {
+                if (orders[0].ID == comp.ID)
+                {
+                    if (GetBestDropOff(pos, out var dropPos))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(dropPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(dropPos));
+                        RemoveFromOrder(bot, orders[0]);
+                    }
+                    else if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
+                    {
+                        Debug.LogError("No hatch free, dropping on next free counter");
+                        EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(counterPos));
+                        RemoveFromOrder(bot, orders[0]);
+                    }
+                    else
+                    {
+                        Debug.LogError("No dropoff location free!");
+                    }
+                    ClearItemMemory(bot);
+                }
+                else if (comp.ID == 938942828 && comp.Items.IsEquivalent(baked)) // Slice
+                {
+                    if (GetNearestAppliance(pos, Plates, out var platePos, out _, null, FillStateCheck.IsNotEmpty))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(platePos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(platePos));
+                    }
+                    else
+                    {
+                        Debug.LogError("No plates found in kitchen!");
+                    }
+                }
+                else if (comp.ID == -1196800934 && comp.Items.IsEquivalent(baked)) // baked pizza
+                {
+                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(counterPos));
+                    }
+                    else
+                    {
+                        Debug.LogError("No free counter!");
+                        EmptyHands(bot);
+                        RemoveFromOrder(bot, orders[0]);
+                    }
+                }
+                else if (comp.ID == 445221203 && comp.Items.Contains(pizzaType)) // unbaked pizza
+                {
+                    if (GetNearestAppliance(pos, CookingAppliances, out var hobPos, out _, true, null, KitchenRoomTypes))
+                    {
+                        if (HobInteraction(bot, hobPos))
+                            EntityManager.AddComponentData(bot, new CBotWaiting(hobPos, -1196800934));
+                    }
+                    else
+                    {
+                        Debug.LogError("No free hob!");
+                    }
+                }
+                else if (comp.ID == 1296980128) // Dough
+                {
+                    FindNearestItem(bot, new HashSet<int> { -1900989960 }, pos, out var oilPos, false, KitchenRoomTypes);
+                    EntityManager.AddComponentData(bot, new CMoveTo(oilPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(oilPos));
+                }
+                else if (comp.ID == 1242961771 || comp.ID == -201067776 || comp.ID == 313161428 || comp.ID == -755280170) // Raw tomato, onion, mushroom, cheese
+                {
+                    if (GetNearestAppliance(pos, Counters, out var dropPos, out _, true, null, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(dropPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(dropPos));
+                        AddItemMemory(bot, comp.ID, dropPos);
+                    }
+                    else
+                    {
+                        Debug.LogError("No free counter!");
+                    }
+                }
+                else if (comp.ID == -48499881) // crust
+                {
+                    if (TryGetItemMemory(bot, -1317168923, out var soucePos))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(soucePos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(soucePos));
+                        RemoveItemMemory(bot, -1317168923);
+                    }
+                    else
+                    {
+                        if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes))
+                        {
+                            EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                            EntityManager.AddComponentData(bot, new CGrabAction(counterPos));
+                            AddItemMemory(bot, -48499881, counterPos);
+                        }
+                        else
+                        {
+                            Debug.LogError("No free counter!");
+                        }
+                    }
+                }
+                else if (comp.ID == 263830100) // grated cheese
+                {
+                    if (FindNearestItem(new ItemInfo(445221203, -48499881, -1317168923), pos, out var soucedCrustPos, false, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(soucedCrustPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(soucedCrustPos));
+                    }
+                    else
+                    {
+                        Debug.LogError("No target for cheese!");
+                        EmptyHands(bot);
+                    }
+                }
+                else if (comp.ID == -1252408744 || comp.ID == -2093899333) // onion - chopped, mushroom - chopped
+                {
+                    if (FindNearestItem(new ItemInfo(445221203, -48499881, -1317168923, 263830100), pos, out var soucedCrustPos, false, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(soucedCrustPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(soucedCrustPos));
+                    }
+                    else
+                    {
+                        Debug.LogError("No target for ingredient!");
+                        EmptyHands(bot);
+                    }
+                }
+                else if (comp.ID == 1378842682) // flour
+                {
+                    GetNearestAppliance(pos, WaterProviders, out var waterPos, out _, null, null);
+                    EntityManager.AddComponentData(bot, new CMoveTo(waterPos));
+                    EntityManager.AddComponentData(bot, new CInteractAction(waterPos, false));
+                }
+                else
+                {
+                    EmptyHands(bot);
+                }
+            }
+            else
+            {
+                if (FindNearestItem(new ItemInfo(-1196800934, baked), pos, out var pizzaPos, false, null, CookingAppliances, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(pizzaPos));
+                    EntityManager.AddComponentData(bot, new CInteractAction(pizzaPos, true));
+                }
+                else if (FindNearestItem(new ItemInfo(938942828, baked), pos, out pizzaPos, false, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(pizzaPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(pizzaPos));
+                }
+                else if (FindNearestItem(new ItemInfo(-1196800934, baked), pos, out pizzaPos, false, CookingAppliances, null, KitchenRoomTypes))
+                {
+                    HobInteraction(bot, pizzaPos);
+                }
+                else if (FindNearestItem(new ItemInfo(445221203, unbaked), pos, out pizzaPos, false, null, CookingAppliances, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(pizzaPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(pizzaPos));
+                }
+                else if (pizzaType == -2093899333 && FindNearestItem(new ItemInfo(445221203, 263830100, -48499881, -1317168923), pos, out _, false, KitchenRoomTypes))
+                {
+                    if (TryGetItemMemory(bot, 313161428, out var rawShroomPos))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(rawShroomPos));
+                        EntityManager.AddComponentData(bot, new CInteractAction(rawShroomPos, true));
+                        RemoveItemMemory(bot, 313161428);
+                        AddItemMemory(bot, -2093899333, rawShroomPos);
+                    }
+                    else if (FindNearestItem(bot, new HashSet<int> { -2093899333 }, pos, out var choppedShroomPos, false, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(choppedShroomPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(choppedShroomPos));
+                        RemoveItemMemory(bot, -2093899333);
+                    }
+                    else
+                    {
+                        GetNearestAppliance(pos, new HashSet<int> { -1097889139 }, out var mushroomPos, out _, null, null);
+                        EntityManager.AddComponentData(bot, new CMoveTo(mushroomPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(mushroomPos));
+                    }
+                }
+                else if (pizzaType == -1252408744 && FindNearestItem(new ItemInfo(445221203, 263830100, -48499881, -1317168923), pos, out _, false, KitchenRoomTypes))
+                {
+                    if (TryGetItemMemory(bot, -201067776, out var rawOnionPos))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(rawOnionPos));
+                        EntityManager.AddComponentData(bot, new CInteractAction(rawOnionPos, true));
+                        RemoveItemMemory(bot, -201067776);
+                        AddItemMemory(bot, -1252408744, rawOnionPos);
+                    }
+                    else if (FindNearestItem(bot, new HashSet<int> { -1252408744 }, pos, out var choppedOnionPos, false, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(choppedOnionPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(choppedOnionPos));
+                        RemoveItemMemory(bot, -1252408744);
+                    }
+                    else
+                    {
+                        GetNearestAppliance(pos, new HashSet<int> { -2042103798 }, out var onionPos, out _, null, null);
+                        EntityManager.AddComponentData(bot, new CMoveTo(onionPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(onionPos));
+                    }
+                }
+                else
+                {
+                    if (!FindNearestItem(new ItemInfo(445221203, -48499881, -1317168923), pos, out _, false, KitchenRoomTypes)) // crust with tomato souce
+                    {
+                        if (!FindNearestItem(bot, new HashSet<int> { -1317168923 }, pos, out _, false, KitchenRoomTypes)) // tomato souce
+                        {
+                            if (!FindNearestItem(bot, new HashSet<int> { -853757044 }, pos, out var slicedTomatoPos, false, KitchenRoomTypes)) // sliced tomato
+                            {
+                                if (!FindNearestItem(bot, new HashSet<int> { 1242961771 }, pos, out var rawTomatoPos, false, KitchenRoomTypes)) // raw tomato
+                                {
+                                    GetNearestAppliance(pos, new HashSet<int> { -712909563 }, out var tomatoProviderPos, out _, null, null);
+                                    EntityManager.AddComponentData(bot, new CMoveTo(tomatoProviderPos));
+                                    EntityManager.AddComponentData(bot, new CGrabAction(tomatoProviderPos));
+                                }
+                                else
+                                {
+                                    EntityManager.AddComponentData(bot, new CMoveTo(rawTomatoPos));
+                                    EntityManager.AddComponentData(bot, new CInteractAction(rawTomatoPos, true));
+                                    RemoveItemMemory(bot, 1242961771);
+                                    AddItemMemory(bot, -853757044, rawTomatoPos);
+                                }
+                            }
+                            else
+                            {
+                                EntityManager.AddComponentData(bot, new CMoveTo(slicedTomatoPos));
+                                EntityManager.AddComponentData(bot, new CInteractAction(slicedTomatoPos, true));
+                                RemoveItemMemory(bot, -853757044);
+                                AddItemMemory(bot, -1317168923, slicedTomatoPos);
+                            }
+                            return;
+                        }
+                        if (!FindNearestItem(bot, new HashSet<int> { -48499881 }, pos, out var crustPos, false, KitchenRoomTypes))
+                        {
+                            GetNearestAppliance(pos, new HashSet<int> { 925796718 }, out var flourPos, out _, null, null);
+                            EntityManager.AddComponentData(bot, new CMoveTo(flourPos));
+                            EntityManager.AddComponentData(bot, new CGrabAction(flourPos));
+                        }
+                        else
+                        {
+                            EntityManager.AddComponentData(bot, new CMoveTo(crustPos));
+                            EntityManager.AddComponentData(bot, new CGrabAction(crustPos));
+                            RemoveItemMemory(bot, -48499881);
+                        }
+                    }
+                    else
+                    {
+                        if (!FindNearestItem(bot, new HashSet<int> { 263830100 }, pos, out var gratedPos, false, KitchenRoomTypes))
+                        {
+                            if (FindNearestItem(bot, new HashSet<int> { -755280170 }, pos, out var rawCheesePos, false, KitchenRoomTypes))
+                            {
+                                EntityManager.AddComponentData(bot, new CMoveTo(rawCheesePos));
+                                EntityManager.AddComponentData(bot, new CInteractAction(rawCheesePos, true));
+                                RemoveItemMemory(bot, -755280170);
+                                AddItemMemory(bot, 263830100, rawCheesePos);
+                            }
+                            else
+                            {
+                                GetNearestAppliance(pos, new HashSet<int> { -117339838 }, out var providerPos, out _, null, null);
+                                EntityManager.AddComponentData(bot, new CMoveTo(providerPos));
+                                EntityManager.AddComponentData(bot, new CGrabAction(providerPos));
+                            }
+                        }
+                        else
+                        {
+                            EntityManager.AddComponentData(bot, new CMoveTo(gratedPos));
+                            EntityManager.AddComponentData(bot, new CGrabAction(gratedPos));
+                            RemoveItemMemory(bot, 263830100);
+                        }
+                    }
+                }
+            }
         }
 
         private void DumplingsFunction(Entity bot, List<ItemInfo> orders)
