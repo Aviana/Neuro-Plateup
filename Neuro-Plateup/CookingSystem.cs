@@ -127,6 +127,7 @@ namespace Neuro_Plateup
                 { 599544171, AppleSaladFunction },
                 { -2053442418, PotatoSaladFunction },
                 { -1087205958, PizzaFunction },
+                { -1196800934, PizzaFunction },
                 { -1938035042, DumplingsFunction },
                 { -1293050650, CoffeeFunction }, // Coffee Cup
                 { -249136431, CoffeeFunction }, // Affogato
@@ -161,6 +162,7 @@ namespace Neuro_Plateup
                 { 1190974918, GetFromProviderFunction },
                 { 749675166, GetFromProviderFunction },
                 { -1721929071, GetFromProviderFunction },
+                { 41735497, GetFromProviderFunction },
             };
         }
 
@@ -196,6 +198,10 @@ namespace Neuro_Plateup
                 if (GetNearestAppliance(pos, new HashSet<int> { 303858729 }, out var crackerPos, out _, null, null, NonKitchenRoomTypes))
                 {
                     ServeProviders[749675166] = crackerPos;
+                }
+                if (GetNearestAppliance(pos, new HashSet<int> { 143484231 }, out var cakePos, out _, null, null, NonKitchenRoomTypes))
+                {
+                    ServeProviders[41735497] = cakePos;
                 }
             }
             var Bots = BotQuery.ToEntityArray(Allocator.Temp);
@@ -973,7 +979,7 @@ namespace Neuro_Plateup
             var pos = GetComponent<CPosition>(bot).Position.Rounded();
             if (GetComponentOfHeld<CItem>(bot, out var comp))
             {
-                if (orders[0].ID == comp.ID)
+                if (orders[0] == comp)
                 {
                     if (GetBestDropOff(pos, out var dropPos))
                     {

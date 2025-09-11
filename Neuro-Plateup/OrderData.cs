@@ -262,9 +262,12 @@ namespace Neuro_Plateup
 
             { "Potato Salad", new ItemInfo(-2053442418, new FixedListInt64 { 793377380, -1252408744, -1399719685, 564003642 }) },
 
-            { "Pizza", new ItemInfo(-1087205958, new FixedListInt64 { 793377380, -1317168923, -48499881, -369505908 }) },
-            { "Mushroom Pizza", new ItemInfo(-1087205958, new FixedListInt64 { 793377380, -1317168923, -48499881, -369505908, -336580972 }) },
-            { "Onion Pizza", new ItemInfo(-1087205958, new FixedListInt64 { 793377380, -1317168923, -48499881, -369505908, -1633089577 }) },
+            { "Plated Pizza", new ItemInfo(-1087205958, new FixedListInt64 { 793377380, -1317168923, -48499881, -369505908 }) },
+            { "Pizza", new ItemInfo(-1196800934, new FixedListInt64 { -1317168923, -48499881, -369505908 }) },
+            { "Plated Mushroom Pizza", new ItemInfo(-1087205958, new FixedListInt64 { 793377380, -1317168923, -48499881, -369505908, -336580972 }) },
+            { "Mushroom Pizza", new ItemInfo(-1196800934, new FixedListInt64 { -1317168923, -48499881, -369505908, -336580972 }) },
+            { "Plated Onion Pizza", new ItemInfo(-1087205958, new FixedListInt64 { 793377380, -1317168923, -48499881, -369505908, -1633089577 }) },
+            { "Onion Pizza", new ItemInfo(-1196800934, new FixedListInt64 { -1317168923, -48499881, -369505908, -1633089577 }) },
 
             { "Dumplings", new ItemInfo(-1938035042, new FixedListInt64 { 793377380, 1640282430 }) },
             { "Dumplings with Seaweed", new ItemInfo(-1938035042, new FixedListInt64 { 793377380, 1640282430, -1847818036 }) },
@@ -279,6 +282,8 @@ namespace Neuro_Plateup
             { "Tea Cup", new ItemInfo(-1721929071, new FixedListInt64 { -1721929071 }) },
 
             { "Affogato", new ItemInfo(-249136431, new FixedListInt64 { -1293050650, 1570518340 }) },
+
+            { "Cake Stand", new ItemInfo(41735497, new FixedListInt64 { 41735497 }) },
 
             { "Burgers", new ItemInfo(-884392267, new FixedListInt64 { 793377380, -1756808590, 687585830 }) },
 
