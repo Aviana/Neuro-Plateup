@@ -24,11 +24,11 @@ namespace Neuro_Plateup
 
     public struct CBotItems : IBufferElementData
     {
-        public int ID;
+        public ItemInfo Item;
         public Vector3 Position;
-        public CBotItems(int id, Vector3 position)
+        public CBotItems(ItemInfo item, Vector3 position)
         {
-            ID = id;
+            Item = item;
             Position = position;
         }
     }
@@ -93,13 +93,17 @@ namespace Neuro_Plateup
     {
         public Vector3 Position;
 
-        public CGrabAction(int x, int y, int z)
+        public GrabType Type;
+
+        public CGrabAction(int x, int y, int z, GrabType type)
         {
             Position = new Vector3 { x = x, y = y, z = z };
+            Type = type;
         }
-        public CGrabAction(Vector3 position)
+        public CGrabAction(Vector3 position, GrabType type)
         {
             Position = position;
+            Type = type;
         }
     }
 
@@ -156,6 +160,14 @@ namespace Neuro_Plateup
             Items = new FixedListInt64 { id };
         }
 
+        public ItemInfo(CItem item)
+        {
+            ID = item.ID;
+            Items = new FixedListInt64();
+            foreach (var i in item.Items)
+                Items.Add(i);
+        }
+
         public ItemInfo(int id, params int[] items)
         {
             ID = id;
@@ -173,6 +185,19 @@ namespace Neuro_Plateup
         }
 
         public static bool operator !=(ItemInfo a, CItem b)
+        {
+            return !(a == b);
+        }
+
+        public static bool operator ==(CItem a, ItemInfo b)
+        {
+            if (a.ID != b.ID)
+                return false;
+
+            return a.Items.IsEquivalent(b.Items);
+        }
+
+        public static bool operator !=(CItem a, ItemInfo b)
         {
             return !(a == b);
         }

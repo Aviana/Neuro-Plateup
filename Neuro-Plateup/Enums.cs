@@ -22,4 +22,15 @@ namespace Neuro_Plateup
         Dishwasher = 1 << 3,
         Any = Chef | Waiter | Dishwasher
     }
+
+    [System.Flags]
+    public enum GrabType
+    {
+        Undefined,
+        Pickup,
+        Drop,
+        CombineDrop,
+        Fill,
+        Dispense
+    }
 }

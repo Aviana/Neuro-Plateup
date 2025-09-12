@@ -6,16 +6,6 @@ using Unity.Collections;
 
 public static class ObjectExtensions
 {
-    public static FixedListInt64 ToFixedListInt64(this ItemList container)
-    {
-        var list = new FixedListInt64();
-        foreach (var entry in container)
-        {
-            list.Add(entry);
-        }
-        return list;
-    }
-
     public static bool Contains(this ItemList container, int value)
     {
         for (int i = 0; i < container.Count; i++)
@@ -56,11 +46,23 @@ public static class ObjectExtensions
         return true;
     }
 
+    public static bool Contains(this HashSet<ItemInfo> list, CItem item)
+    {
+        foreach (var entry in list)
+        {
+            if (entry == item)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static bool Contains(this List<ItemInfo> list, CItem item)
     {
         foreach (var entry in list)
         {
-            if (entry.ID == item.ID && item.Items.IsEquivalent(entry.Items))
+            if (entry == item)
             {
                 return true;
             }

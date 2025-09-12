@@ -570,7 +570,7 @@ namespace Neuro_Plateup
                                 return true;
                             }
 
-                            orderedFood.Add(new ItemInfo(comp.ID, comp.Items.ToFixedListInt64()));
+                            orderedFood.Add(new ItemInfo(comp));
                         }
                     }
                 }
@@ -645,7 +645,7 @@ namespace Neuro_Plateup
                         continue;
 
                     var comp = GetComponent<CItem>(order.Item);
-                    orderSets[patience].Add(new ItemInfo(comp.ID, comp.Items.ToFixedListInt64()));
+                    orderSets[patience].Add(new ItemInfo(comp));
                 }
             }
             Orders.Dispose();
@@ -666,7 +666,7 @@ namespace Neuro_Plateup
                     var citem = GetComponent<CItem>(ent);
                     for (int i = orderSet.Count - 1; i >= 0; i--)
                     {
-                        if (citem.Items.IsEquivalent(orderSet[i].Items))
+                        if (citem == orderSet[i])
                         {
                             orderSet.RemoveAt(i);
                             break;

@@ -46,12 +46,30 @@ namespace Neuro_Plateup
             var BotEntities = BotQuery.ToEntityArray(Allocator.Temp);
             foreach (var bot in BotEntities)
             {
-                // NYI: Fix items changing during travel time
                 var evt = new InputUpdateEvent();
                 var ID = GetComponent<CPlayer>(bot).ID;
                 evt.User = ID;
                 var comp = GetComponent<CGrabAction>(bot);
                 var appliance = TileManager.GetPrimaryOccupant(comp.Position);
+                var hasHeld = GetComponentOfHeld<CItem>(appliance, out _) ^ GetComponentOfHeld<CItem>(bot, out _);
+
+                if ((comp.Type == GrabType.Drop || comp.Type == GrabType.Pickup) && !hasHeld)
+                {
+                    grabInfo[ID] = 0;
+                    EntityManager.RemoveComponent<CGrabAction>(bot);
+                    continue;
+                }
+
+
+                if (ApplianceCapacity(appliance, out var current, out var maximum))
+                {
+                    if (comp.Type == GrabType.Fill && current == maximum || comp.Type == GrabType.Dispense && current == 0)
+                    {
+                        grabInfo[ID] = 0;
+                        EntityManager.RemoveComponent<CGrabAction>(bot);
+                        continue;
+                    }
+                }
 
                 if (Require<CAttemptingInteraction>(bot, out var comp3) && comp3.Target == appliance)
                 {
@@ -83,6 +101,25 @@ namespace Neuro_Plateup
                 input.Send(evt);
             }
             BotEntities.Dispose();
+        }
+        
+        private bool ApplianceCapacity(Entity appliance, out int current, out int maximum)
+        {
+            if (Require<CApplianceBin>(appliance, out var compBin))
+            {
+                current = compBin.CurrentAmount;
+                maximum = compBin.Capacity;
+                return true;
+            }
+            else if (Require<CItemProvider>(appliance, out var compProvider))
+            {
+                current = compProvider.Available;
+                maximum = compProvider.Maximum;
+                return true;
+            }
+            current = 0;
+            maximum = 0;
+            return false;
         }
     }
 }
