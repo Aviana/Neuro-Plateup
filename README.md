@@ -11,7 +11,7 @@ This mod will add virtual players to your game and present the server with actio
 1. (Optional) Launch PlateUp! without this mod and create a profile for each bot. The profile name will be the name of the bot. Also adjust player color and accessories on the mirror in the starter lobby. If you skip this profiles with default values will be created for you. You can also still edit profiles by selecting them when starting a single player lobby while using the mod.
 2. Download the latest file from the [Releases](https://github.com/Aviana/Neuro-Plateup/releases).
 3. Extract and copy the Neuro-Plateup folder to your ../SteamLibrary/steamapps/common/PlateUp/PlateUp/Mods/ directory.
-4. Modify the bots.csv file inside the Neuro-Plateup folder to adjust the amount of bots and names. Each line contains one bot. Syntax is <websocket-url>,<profilename>. Unreachable URLs will not spawn a bot. Profilename has a character limit of 20.
+4. Modify the bots.csv file inside the Neuro-Plateup folder to adjust the amount of bots and names. Each line contains one bot. Syntax is `<websocket-url>,<profilename>`. Unreachable URLs will not spawn a bot. Profilename has a character limit of 20.
 5. Launch the game.
 
 ## Usage
