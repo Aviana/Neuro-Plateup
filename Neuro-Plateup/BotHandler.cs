@@ -5,16 +5,19 @@ using Unity.Collections;
 using Controllers;
 using System.Collections.Generic;
 using System.Reflection;
+using HarmonyLib;
 
 namespace Neuro_Plateup
 {
     public class BotHandler : GenericSystemBase, IModSystem
     {
-        private EntityQuery botQuery, playerQuery;
+        private static EntityQuery botQuery, playerQuery, optionQuery, optionQuery2, optionQuery3;
         bool isInitialized = false;
         private FakeInput input;
         private InputUpdateEvent evt;
         public static Dictionary<int, BotRole> currentRoles = new Dictionary<int, BotRole>();
+
+        private static GameSystemBase UpdateCustomerImpatience, UpdateQueuePatience, CreateCustomerSchedule;
 
         protected override void Initialise()
         {
@@ -32,6 +35,25 @@ namespace Neuro_Plateup
                     ).None(
                         typeof(CBotControl)
                     ));
+            optionQuery = GetEntityQuery(
+                new QueryHelper()
+                    .All(
+                        typeof(CPlayer),
+                        typeof(CPosition)
+                    ));
+            optionQuery2 = GetEntityQuery(
+                new QueryHelper()
+                    .All(
+                        typeof(CPlayer),
+                        typeof(CPosition)
+                    ).None(
+                        typeof(CBotControl)
+                    ));
+            optionQuery3 = GetEntityQuery(
+                new QueryHelper()
+                    .All(
+                        typeof(CPlayer)
+                    ));
             input = new FakeInput();
             evt = new InputUpdateEvent
             {
@@ -42,6 +64,10 @@ namespace Neuro_Plateup
                     InteractAction = ButtonState.Pressed
                 },
             };
+
+            UpdateCustomerImpatience = World.GetExistingSystem<UpdateCustomerImpatience>();
+            UpdateQueuePatience = World.GetExistingSystem<UpdateQueuePatience>();
+            CreateCustomerSchedule = World.GetExistingSystem<CreateCustomerSchedule>();
         }
 
         protected override void OnStartRunning()
@@ -118,7 +144,42 @@ namespace Neuro_Plateup
                         Players.Main.ReloadLocalProfile(ID);
                     }
                     ActiveBots.Dispose();
+
+                    RefreshOptions();
                 }
+            }
+        }
+
+        public static void RefreshOptions()
+        {
+            var CustomerPatienceOption = AccessTools.Field(typeof(UpdateCustomerImpatience), "Players");
+            if (NeuroPreferences.GetCustomerPatienceOption())
+            {
+                CustomerPatienceOption.SetValue(UpdateCustomerImpatience, optionQuery);
+            }
+            else
+            {
+                CustomerPatienceOption.SetValue(UpdateCustomerImpatience, optionQuery2);
+            }
+
+            var QueuePatienceOption = AccessTools.Field(typeof(UpdateQueuePatience), "Players");
+            if (NeuroPreferences.GetQueuePatienceOption())
+            {
+                QueuePatienceOption.SetValue(UpdateQueuePatience, optionQuery3);
+            }
+            else
+            {
+                QueuePatienceOption.SetValue(UpdateQueuePatience, playerQuery);
+            }
+
+            var CustomerAmountOption = AccessTools.Field(typeof(CreateCustomerSchedule), "Players");
+            if (NeuroPreferences.GetCustomerAmountOption())
+            {
+                CustomerAmountOption.SetValue(CreateCustomerSchedule, optionQuery3);
+            }
+            else
+            {
+                CustomerAmountOption.SetValue(CreateCustomerSchedule, playerQuery);
             }
         }
     }

@@ -12,7 +12,8 @@ This mod will add virtual players to your game and present the server with actio
 2. Download the latest file from the [Releases](https://github.com/Aviana/Neuro-Plateup/releases).
 3. Extract and copy the Neuro-Plateup folder to your ../SteamLibrary/steamapps/common/PlateUp/PlateUp/Mods/ directory.
 4. Modify the bots.csv file inside the Neuro-Plateup folder to adjust the amount of bots and names. Each line contains one bot. Syntax is `<websocket-url>,<profilename>`. Unreachable URLs will not spawn a bot. Profilename has a character limit of 20.
-5. Launch the game.
+5. Install [HarmonyX](https://steamcommunity.com/sharedfiles/filedetails/?id=2898033283) from the Steam Workshop.
+6. Launch the game.
 
 ## Usage
 
@@ -69,3 +70,4 @@ Thanks to:
 - Vedal987: Creator of [Neuro-sama](https://www.twitch.tv/vedal987)
 - [Alexvoid](https://github.com/Alexejhero): Creator of the [Neuro Game SDK](https://github.com/VedalAI/neuro-game-sdk)
 - [Pasu4](https://github.com/Pasu4), [CoolCat467](https://github.com/CoolCat467): The [Tony](https://github.com/Pasu4/neuro-api-tony) interface for debugging
+- Gregory Propst(propstg): plateup-starting-meal-selector for testing & its code teaching me menus/options
