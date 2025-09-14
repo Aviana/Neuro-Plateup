@@ -749,6 +749,29 @@ namespace Neuro_Plateup
                         return;
                     }
                 }
+                else if (CookingSystem.ServeProviders.ContainsKey(comp.ID))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(CookingSystem.ServeProviders[comp.ID]));
+                    EntityManager.AddComponentData(bot, new CGrabAction(CookingSystem.ServeProviders[comp.ID], GrabType.Undefined));
+                }
+                else if (CookingSystem.Condiments.Contains(comp.ID))
+                {
+                    if (cookingSystem.GetBestDropOff(pos, out var hatchPos))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(hatchPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(hatchPos, GrabType.Drop));
+                        return;
+                    }
+                    else
+                    {
+                        // All hatches are blocked
+                        EntityManager.RemoveComponent<CBotAction>(bot);
+                        RequireBuffer<CBotFeedback>(bot, out var buffer);
+                        buffer.Add(new CBotFeedback("Can't return condiment hatches are full.", true));
+                        EmptyHands(bot);
+                        return;
+                    }
+                }
                 else
                 {
                     // We are holding something that is not a dirty plate
@@ -756,7 +779,7 @@ namespace Neuro_Plateup
                     return;
                 }
             }
-            else if (cookingSystem.FindNearestItem(bot, new HashSet<ItemInfo> { new ItemInfo(1517992271), new ItemInfo(-1527669626), new ItemInfo(348289471) }, pos, out var target, true, CookingSystem.NonKitchenRoomTypes))
+            else if (cookingSystem.GetNextDirtyTablePosition(bot, out var target))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(target));
                 EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Pickup));

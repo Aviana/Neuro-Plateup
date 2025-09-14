@@ -70,4 +70,4 @@ Thanks to:
 - Vedal987: Creator of [Neuro-sama](https://www.twitch.tv/vedal987)
 - [Alexvoid](https://github.com/Alexejhero): Creator of the [Neuro Game SDK](https://github.com/VedalAI/neuro-game-sdk)
 - [Pasu4](https://github.com/Pasu4), [CoolCat467](https://github.com/CoolCat467): The [Tony](https://github.com/Pasu4/neuro-api-tony) interface for debugging
-- Gregory Propst(propstg): plateup-starting-meal-selector for testing & its code teaching me menus/options
+- Gregory Propst(propstg): [plateup-starting-meal-selector](https://github.com/propstg/plateup-starting-meal-selector) for testing & its code teaching me menus/options

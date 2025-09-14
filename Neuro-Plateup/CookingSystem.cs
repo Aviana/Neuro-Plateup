@@ -14,13 +14,13 @@ namespace Neuro_Plateup
     [UpdateInGroup(typeof(SimulationSystemGroup), OrderLast = true)]
     public class CookingSystem : GenericSystemBase, IModSystem
     {
-        private EntityQuery BotQuery, HeldItems, ResetQuery;
+        private EntityQuery BotQuery, HeldItems, ResetQuery, TableQuery;
 
         private MoveToSystem moveTo;
 
         private static Dictionary<int, Action<Entity, List<ItemInfo>>> MealFunctions;
 
-        public static HashSet<int> CookingAppliances, DishWashers, Sinks, Bins, Counters, WaterProviders, Plates, Tables, DirtyPlates, Trash, NoAppliances;
+        public static HashSet<int> CookingAppliances, DishWashers, Sinks, Bins, Counters, WaterProviders, Plates, Tables, DirtyPlates, Trash, Condiments, NoAppliances;
 
         public static Dictionary<int, Vector3> ServeProviders = new Dictionary<int, Vector3>();
 
@@ -101,6 +101,8 @@ namespace Neuro_Plateup
                         typeof(SIsDayFirstUpdate),
                         typeof(SIsNightFirstUpdate)
                     ));
+            TableQuery = GetEntityQuery(typeof(CApplianceTable));
+
             CookingAppliances = new HashSet<int> { 1154757341, -1448690107, 1266458729, 862493270, -441141351, 805530854, 944301512, -1311702572, -1068749602, 782648278, -1688921160 };
             DishWashers = new HashSet<int> { -214126192, -823922901 };
             Sinks = new HashSet<int> { 1083874952, 1467371088, -266993023, 540526865 };
@@ -111,6 +113,7 @@ namespace Neuro_Plateup
             Tables = new HashSet<int> { 209074140, -3721951, -34659638, -203679687, -2019409936 };
             DirtyPlates = new HashSet<int> { 1517992271, -1527669626, 348289471 };
             Trash = new HashSet<int> { 1075166571, -1724190260, -1960690485, -263299406, -1063655063, 936242560, 320607572, 958173724, 469714996, 1770849684, -1755371377, -1140210773, -1370587045, 390623838, -1427780146, -1176063723, -1628910037, -106588634 };
+            Condiments = new HashSet<int> { -1075930689, -1114203942, 1190974918, 41735497 };
             NoAppliances = new HashSet<int>();
 
             MealFunctions = new Dictionary<int, Action<Entity, List<ItemInfo>>>
@@ -248,6 +251,59 @@ namespace Neuro_Plateup
             // NYI: return things like the sharp knife
             // NYI: Find a better way to empty the hands
             EntityManager.AddComponent<CReturnItem>(GetComponent<CItemHolder>(bot).HeldItem);
+        }
+
+        public bool GetNextDirtyTablePosition(Entity bot, out Vector3 position)
+        {
+            position = new Vector3();
+            var flag = false;
+            var currentSteps = int.MaxValue;
+
+            var pos = GetComponent<CPosition>(bot).Position.Rounded();
+            var Tables = TableQuery.ToEntityArray(Allocator.Temp);
+            foreach (var t in Tables)
+            {
+                var tablePos = GetComponent<CPosition>(t).Position;
+                if (RequireBuffer<CItemStored>(t, out var buffer) && buffer.Length > 0)
+                {
+                    foreach (var entry in buffer)
+                    {
+                        if (Require<CItem>(entry.StoredItem, out var comp) && DirtyPlates.Contains(comp.ID))
+                        {
+                            if (moveTo.GetWaypoint(pos, tablePos, out _, out var steps) && steps < currentSteps)
+                            {
+                                currentSteps = steps;
+                                position = tablePos;
+                                flag = true;
+                            }
+                            else if (steps == 0)
+                            {
+                                position = tablePos;
+                                Tables.Dispose();
+                                return true;
+                            }
+                            break;
+                        }
+                    }
+                }
+                else if (GetComponentOfHeld<CItem>(t, out var comp2) && DirtyPlates.Contains(comp2.ID))
+                {
+                    if (moveTo.GetWaypoint(pos, tablePos, out _, out var steps) && steps < currentSteps)
+                    {
+                        currentSteps = steps;
+                        position = tablePos;
+                        flag = true;
+                    }
+                    else if (steps == 0)
+                    {
+                        position = tablePos;
+                        Tables.Dispose();
+                        return true;
+                    }
+                }
+            }
+            Tables.Dispose();
+            return flag;
         }
 
         private bool ApplianceCapacity(Entity appliance, out int current, out int maximum)

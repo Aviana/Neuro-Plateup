@@ -15,7 +15,7 @@ namespace Neuro_Plateup
 {
     public class ActionReporterSystem : WebsocketSystemBase
     {
-        private EntityQuery BotQuery, IdleBotQuery, Feedback, Service, Fires, Messes, OrderQuery, HeldItems, Ingredients, BinsQuery, UnlockQuery, ProgressionQuery, PatienceQuery;
+        private EntityQuery BotQuery, IdleBotQuery, Feedback, Service, Fires, Messes, OrderQuery, HeldItems, Ingredients, BinsQuery, UnlockQuery, ProgressionQuery, PatienceQuery, TableQuery;
 
         private readonly Dictionary<int, List<string>> RegisteredActions = new Dictionary<int, List<string>> { };
 
@@ -83,6 +83,7 @@ namespace Neuro_Plateup
                         typeof(CProgressionOption.Displayed)
                     ));
             PatienceQuery = GetEntityQuery(typeof(CPatience));
+            TableQuery = GetEntityQuery(typeof(CApplianceTable));
 
             gameStateQueries = new List<(EntityQuery, GameState)>
             {
@@ -560,7 +561,7 @@ namespace Neuro_Plateup
                         }
 
                         if (order.IsComplete)
-                                continue;
+                            continue;
 
                         if (Require<CItem>(order.Item, out var comp))
                         {
@@ -719,6 +720,7 @@ namespace Neuro_Plateup
                     var tile = TileManager.GetTile(pos);
                     if (!HasComponent<CPlayer>(holder) && (MoveToSystem.Hatches.Contains(pos) || tile.Type == RoomType.Kitchen))
                     {
+                        Items.Dispose();
                         return true;
                     }
                 }
@@ -729,22 +731,29 @@ namespace Neuro_Plateup
 
         public bool HasDirtyPlates(Entity bot)
         {
-            // NYI: Include returning Ketchup, Mustard and Soy Sauce
-            var Items = HeldItems.ToEntityArray(Allocator.Temp);
-            foreach (var item in Items)
+            var pos = GetComponent<CPosition>(bot).Position.Rounded();
+            var Tables = TableQuery.ToEntityArray(Allocator.Temp);
+            foreach (var t in Tables)
             {
-                if (CookingSystem.DirtyPlates.Contains(GetComponent<CItem>(item).ID))
+                var tablePos = GetComponent<CPosition>(t).Position;
+                if (RequireBuffer<CItemStored>(t, out var buffer) && buffer.Length > 0)
                 {
-                    var holder = GetComponent<CHeldBy>(item).Holder;
-                    var pos = GetComponent<CPosition>(holder).Position;
-                    var tile = TileManager.GetTile(pos);
-                    if (tile.Type != RoomType.Kitchen && !HasComponent<CPlayer>(holder) && !MoveToSystem.Hatches.Contains(pos))
+                    foreach (var entry in buffer)
                     {
-                        return true;
+                        if (Require<CItem>(entry.StoredItem, out var comp) && CookingSystem.DirtyPlates.Contains(comp.ID))
+                        {
+                            Tables.Dispose();
+                            return true;
+                        }
                     }
                 }
+                else if (GetComponentOfHeld<CItem>(t, out var comp2) && CookingSystem.DirtyPlates.Contains(comp2.ID))
+                {
+                    Tables.Dispose();
+                    return true;
+                }
             }
-            Items.Dispose();
+            Tables.Dispose();
             return false;
         }
     }
