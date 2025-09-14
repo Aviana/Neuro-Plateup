@@ -54,6 +54,7 @@ Every time you encounter a check for consent from all players the bots will auto
 - DO NOT BLOCK PATHS. This includes chairs. Because occupied chairs are considered an obstacle. And while two half size appliances like the fridge opposite to each other leave a full slot to walk between, it does not for the bots.
 - Keep kitchen and dining seperate. The bots are designed to pass things through the hatch that connects dining and kitchen. Always make sure there are enough counters on one side of the hatch to match the amount of guests per group. A hatch the size of 2 can reach 4 tiles on the other side.
 - Keep automation simple (see out of scope)
+- Things directly served to customers (Ketchup, Mustard, Soy Souce, Christmas Crackers, Tea Cups, Cake Stand) can be placed in the dining area as waiters are able to serve them directly
 
 ## Out of Scope
 

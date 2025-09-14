@@ -166,6 +166,8 @@ namespace Neuro_Plateup
                 { 749675166, GetFromProviderFunction },
                 { -1721929071, GetFromProviderFunction },
                 { 41735497, GetFromProviderFunction },
+                { -849164789, GetFromProviderFunction },
+                { 329108931, GetFromProviderFunction }
             };
         }
 
@@ -206,6 +208,14 @@ namespace Neuro_Plateup
                 {
                     ServeProviders[41735497] = cakePos;
                 }
+                if (GetNearestAppliance(pos, new HashSet<int> { -2133205155 }, out var sugarPos, out _, null, null, NonKitchenRoomTypes))
+                {
+                    ServeProviders[-849164789] = sugarPos;
+                }
+                if (GetNearestAppliance(pos, new HashSet<int> { 120342736 }, out var milkPos, out _, null, null, NonKitchenRoomTypes))
+                {
+                    ServeProviders[329108931] = milkPos;
+                }
             }
             var Bots = BotQuery.ToEntityArray(Allocator.Temp);
             foreach (var bot in Bots)
@@ -227,7 +237,6 @@ namespace Neuro_Plateup
                 }
                 else
                 {
-                    // NYI: prevent switching type as we prepare the items
                     var buffer = GetBuffer<CBotOrders>(bot);
                     var list = new List<ItemInfo>();
 
@@ -306,7 +315,7 @@ namespace Neuro_Plateup
             return flag;
         }
 
-        private bool ApplianceCapacity(Entity appliance, out int current, out int maximum)
+        public bool ApplianceCapacity(Entity appliance, out int current, out int maximum)
         {
             if (Require<CApplianceBin>(appliance, out var compBin))
             {
@@ -373,7 +382,7 @@ namespace Neuro_Plateup
                 {
                     var pos = GetComponent<CPosition>(appliance).Position;
 
-                    if (!validRoomTypes.Contains(TileManager.GetTile(pos).Type))
+                    if (!validRoomTypes.Contains(TileManager.GetTile(pos).Type) && !MoveToSystem.Hatches.Contains(pos))
                     {
                         continue;
                     }
@@ -521,10 +530,6 @@ namespace Neuro_Plateup
                     {
                         continue;
                     }
-                    if (!validRoomTypes.Contains(TileManager.GetTile(comp4.Position).Type))
-                    {
-                        continue;
-                    }
 
                     var tile = TileManager.GetTile(comp4.Position);
                     var isHatch = MoveToSystem.Hatches.Contains(comp4.Position);
@@ -533,7 +538,7 @@ namespace Neuro_Plateup
                     {
                         continue;
                     }
-                    else if (!validRoomTypes.Contains(tile.Type) && !isHatch)
+                    if (!validRoomTypes.Contains(tile.Type) && !isHatch)
                     {
                         continue;
                     }
@@ -590,7 +595,7 @@ namespace Neuro_Plateup
                     {
                         continue;
                     }
-                    else if (!validRoomTypes.Contains(tile.Type) && !isHatch)
+                    if (!validRoomTypes.Contains(tile.Type) && !isHatch)
                     {
                         continue;
                     }

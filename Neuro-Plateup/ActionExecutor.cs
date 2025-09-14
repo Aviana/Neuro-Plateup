@@ -295,9 +295,8 @@ namespace Neuro_Plateup
                         break;
 
                     var patience = patienceList[order.TablePosition];
-                    var hasExtra = order.ShowExtra && CookingSystem.ServeProviders.ContainsKey(order.ExtraID);
 
-                    if (order.IsComplete && !hasExtra)
+                    if (order.IsComplete && !order.ShowExtra)
                         continue;
 
                     if (!orderSets.ContainsKey(patience))
@@ -305,7 +304,7 @@ namespace Neuro_Plateup
                         orderSets[patience] = new OrderList(order.TablePosition);
                     }
 
-                    if (hasExtra)
+                    if (order.ShowExtra)
                         orderSets[patience].Add(new ItemInfo(order.ExtraID));
 
                     if (order.IsComplete)
@@ -360,8 +359,7 @@ namespace Neuro_Plateup
                     var pos = GetComponent<CPosition>(GetComponent<CHeldBy>(item).Holder).Position;
                     if (MoveToSystem.Hatches.Contains(pos))
                     {
-                        var comp = GetComponent<CItem>(item);
-                        servables.Add(pos, new ItemInfo(comp));
+                        servables.Add(pos, new ItemInfo(GetComponent<CItem>(item)));
                     }
                 }
                 Items.Dispose();
@@ -378,6 +376,7 @@ namespace Neuro_Plateup
                 }
 
                 Vector3 target = new Vector3();
+                ItemInfo targetInfo = new ItemInfo();
                 float currentPatience = float.MaxValue;
                 foreach (var servable in servables)
                 {
@@ -387,6 +386,7 @@ namespace Neuro_Plateup
                         {
                             currentPatience = entry.Key;
                             target = servable.Key;
+                            targetInfo = servable.Value;
                         }
                     }
                 }
@@ -397,11 +397,24 @@ namespace Neuro_Plateup
                     EntityManager.RemoveComponent<CBotAction>(bot);
                     return;
                 }
-                EntityManager.AddComponentData(bot, new CMoveTo(target));
+
                 if (CookingSystem.ServeProviders.Values.Contains(target))
+                {
+                    cookingSystem.ApplianceCapacity(TileManager.GetPrimaryOccupant(target), out var current, out var maximum);
+                    if (current != maximum && current == 0 || targetInfo.ID == 41735497)
+                    {
+                        if (!cookingSystem.FindNearestItem(bot, targetInfo, GetComponent<CPosition>(bot).Position.Rounded(), out target, false, CookingSystem.NonKitchenRoomTypes))
+                        {
+                            Debug.LogError("Could not find " + targetInfo.ID);
+                        }
+                    }
                     EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Undefined));
+                }
                 else
+                {
                     EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Pickup));
+                }
+                EntityManager.AddComponentData(bot, new CMoveTo(target));
             }
         }
 

@@ -629,9 +629,8 @@ namespace Neuro_Plateup
                         break;
 
                     var patience = patienceList[order.TablePosition];
-                    var hasExtra = order.ShowExtra && !CookingSystem.ServeProviders.ContainsKey(order.ExtraID);
 
-                    if (order.IsComplete && !hasExtra)
+                    if (order.IsComplete && !order.ShowExtra)
                         continue;
 
                     if (!orderSets.ContainsKey(patience))
@@ -639,8 +638,8 @@ namespace Neuro_Plateup
                         orderSets[patience] = new OrderList(order.TablePosition);
                     }
 
-                    if (hasExtra)
-                        orderSets[patience].Add(new ItemInfo(order.ExtraID, new FixedListInt64 { order.ExtraID }));
+                    if (order.ShowExtra)
+                        orderSets[patience].Add(new ItemInfo(order.ExtraID));
 
                     if (order.IsComplete)
                         continue;
