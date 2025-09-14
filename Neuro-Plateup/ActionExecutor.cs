@@ -398,7 +398,10 @@ namespace Neuro_Plateup
                     return;
                 }
                 EntityManager.AddComponentData(bot, new CMoveTo(target));
-                EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Pickup));
+                if (CookingSystem.ServeProviders.Values.Contains(target))
+                    EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Undefined));
+                else
+                    EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Pickup));
             }
         }
 
