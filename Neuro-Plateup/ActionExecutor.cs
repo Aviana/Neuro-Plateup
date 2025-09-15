@@ -659,6 +659,18 @@ namespace Neuro_Plateup
                         EmptyHands(bot);
                     }
                 }
+                else if (comp.ID == -626784042)
+                {
+                    if (cookingSystem.GetNearestAppliance(pos, new HashSet<int> { 235423916 }, out var boardPos, out _, null, CookingSystem.FillStateCheck.IsNotFull))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(boardPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(boardPos, GrabType.Fill));
+                    }
+                    else
+                    {
+                        EmptyHands(bot);
+                    }
+                }
                 else if (comp.ID == 1517992271)
                 {
                     // dirty plate
@@ -728,7 +740,7 @@ namespace Neuro_Plateup
                 EntityManager.AddComponentData(bot, new CMoveTo(bonePlatePos));
                 EntityManager.AddComponentData(bot, new CInteractAction(bonePlatePos, true));
             }
-            else if (cookingSystem.FindNearestItem(bot, new HashSet<ItemInfo> { new ItemInfo(1517992271), new ItemInfo(-1527669626) }, pos, out var dirtyPlatePos, false, CookingSystem.KitchenRoomTypes))
+            else if (cookingSystem.FindNearestItem(bot, new HashSet<ItemInfo> { new ItemInfo(1517992271), new ItemInfo(-1527669626), new ItemInfo(-626784042) }, pos, out var dirtyPlatePos, false, CookingSystem.KitchenRoomTypes))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(dirtyPlatePos));
                 EntityManager.AddComponentData(bot, new CGrabAction(dirtyPlatePos, GrabType.Pickup));
