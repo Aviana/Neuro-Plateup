@@ -1326,7 +1326,246 @@ namespace Neuro_Plateup
 
         private void DumplingsFunction(Entity bot, List<ItemInfo> orders)
         {
-
+            var pos = GetComponent<CPosition>(bot).Position.Rounded();
+            if (GetComponentOfHeld<CItem>(bot, out var comp))
+            {
+                if (orders[0] == comp)
+                {
+                    if (GetBestDropOff(pos, out var dropPos))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(dropPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(dropPos, GrabType.Drop));
+                    }
+                    else if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
+                    {
+                        Debug.LogError("No hatch free, dropping on next free counter");
+                        EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
+                    }
+                    else
+                    {
+                        Debug.LogError("No dropoff location free!");
+                        EmptyHands(bot);
+                    }
+                    RemoveFromOrder(bot, orders[0]);
+                    ClearItemMemory(bot);
+                }
+                else if (comp.ID == 1296980128 || comp.ID == 1306214641 || comp.ID == -1944015682) // dough / meat / carrot
+                {
+                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, FillStateCheck.Ignore, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
+                        AddItemMemory(bot, new ItemInfo(comp.ID), counterPos);
+                    }
+                    else
+                    {
+                        Debug.LogError("No free Counter!");
+                        EmptyHands(bot);
+                        RemoveFromOrder(bot, orders[0]);
+                        ClearItemMemory(bot);
+                    }
+                }
+                else if (comp.ID == 1378842682)
+                {
+                    GetNearestAppliance(pos, WaterProviders, out var waterPos, out _);
+                    EntityManager.AddComponentData(bot, new CMoveTo(waterPos));
+                    EntityManager.AddComponentData(bot, new CInteractAction(waterPos, false));
+                }
+                else if (comp.ID == -830135945) // carrot chopped
+                {
+                    if (FindNearestItem(bot, new ItemInfo(1296980128), pos, out var dumpPos, false, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(dumpPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(dumpPos, GrabType.CombineDrop));
+                        ClearItemMemory(bot);
+                        AddItemMemory(bot, new ItemInfo(1867434040, 1296980128, -830135945), dumpPos);
+                    }
+                    else
+                    {
+                        EmptyHands(bot);
+                        ClearItemMemory(bot);
+                    }
+                }
+                else if (comp.ID == 1005005768) // meat chopped
+                {
+                    if (FindNearestItem(bot, new ItemInfo(1867434040, 1296980128, -830135945), pos, out var dumpPos, false, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(dumpPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(dumpPos, GrabType.CombineDrop));
+                        ClearItemMemory(bot);
+                        AddItemMemory(bot, new ItemInfo(1867434040, 1296980128, 1005005768, -830135945), dumpPos);
+                    }
+                    else
+                    {
+                        EmptyHands(bot);
+                        ClearItemMemory(bot);
+                    }
+                }
+                else if (comp.ID == 1640282430)
+                {
+                    if (GetNearestAppliance(pos, Plates, out var platePos, out _, null, FillStateCheck.IsNotEmpty))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(platePos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(platePos, GrabType.Dispense));
+                    }
+                    else
+                    {
+                        Debug.LogError("No plates found in kitchen!");
+                        EmptyHands(bot);
+                        RemoveFromOrder(bot, orders[0]);
+                        ClearItemMemory(bot);
+                    }
+                }
+                else if (comp.ID == 1297982178) // seaweed
+                {
+                    if (GetNearestAppliance(pos, CookingAppliances, out var hobPos, out _, true, null, KitchenRoomTypes))
+                    {
+                        if (HobInteraction(bot, hobPos, GrabType.Drop))
+                        {
+                            EntityManager.AddComponentData(bot, new CBotWaiting(hobPos, -1847818036));
+                            AddItemMemory(bot, new ItemInfo(-1847818036), hobPos);
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogError("No free hob!");
+                        EmptyHands(bot);
+                        RemoveFromOrder(bot, orders[0]);
+                        ClearItemMemory(bot);
+                    }
+                }
+                else if (comp.ID == -1847818036) // seaweed cooked
+                {
+                    if (FindNearestItem(bot, new ItemInfo(-1938035042, 1640282430, 793377380), pos, out var platedPos, true, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(platedPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(platedPos, GrabType.CombineDrop));
+                        ClearItemMemory(bot);
+                        AddItemMemory(bot, new ItemInfo(-1938035042, 1640282430, 793377380, -1847818036), platedPos);
+                    }
+                }
+                else if (comp.ID == 718093067) // kneaded dumplings
+                {
+                    if (GetNearestAppliance(pos, CookingAppliances, out var hobPos, out _, true, null, KitchenRoomTypes))
+                    {
+                        if (HobInteraction(bot, hobPos, GrabType.Drop))
+                        {
+                            EntityManager.AddComponentData(bot, new CBotWaiting(hobPos, 1640282430));
+                            AddItemMemory(bot, new ItemInfo(1640282430), hobPos);
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogError("No free hob!");
+                        EmptyHands(bot);
+                        RemoveFromOrder(bot, orders[0]);
+                        ClearItemMemory(bot);
+                    }
+                }
+                else if (comp == new ItemInfo(-1938035042, 1640282430, 793377380))
+                {
+                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, FillStateCheck.Ignore, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
+                        AddItemMemory(bot, new ItemInfo(-1938035042, 1640282430, 793377380), counterPos);
+                    }
+                    else
+                    {
+                        Debug.LogError("No free Counter!");
+                        EmptyHands(bot);
+                        RemoveFromOrder(bot, orders[0]);
+                        ClearItemMemory(bot);
+                    }
+                }
+            }
+            else
+            {
+                if (FindNearestItem(bot, new ItemInfo(-1938035042, 1640282430, 793377380), pos, out _, true, KitchenRoomTypes))
+                {
+                    if (FindNearestItem(bot, new ItemInfo(-1847818036), pos, out var weedPos, false, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(weedPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(weedPos, GrabType.Pickup));
+                        RemoveItemMemory(bot, new ItemInfo(-1847818036));
+                    }
+                    else
+                    {
+                        if (GetNearestAppliance(pos, new HashSet<int> { 595306349 }, out var providerPos, out _))
+                        {
+                            EntityManager.AddComponentData(bot, new CMoveTo(providerPos));
+                            EntityManager.AddComponentData(bot, new CGrabAction(providerPos, GrabType.Undefined));
+                        }
+                    }
+                }
+                else if (FindNearestItem(bot, new ItemInfo(1867434040, 1296980128, 1005005768, -830135945), pos, out var unprepPos, false, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(unprepPos));
+                    EntityManager.AddComponentData(bot, new CInteractAction(unprepPos, true));
+                    ClearItemMemory(bot);
+                    AddItemMemory(bot, new ItemInfo(718093067), unprepPos);
+                }
+                else if (FindNearestItem(bot, new HashSet<ItemInfo> { new ItemInfo(718093067), new ItemInfo(1640282430), new ItemInfo(-1938035042, 1640282430, 793377380, -1847818036) }, pos, out var kneadedPos, false, KitchenRoomTypes))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(kneadedPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(kneadedPos, GrabType.Pickup));
+                    ClearItemMemory(bot);
+                }
+                else if (FindNearestItem(bot, new HashSet<ItemInfo> { new ItemInfo(1296980128), new ItemInfo(1867434040, 1296980128, 1005005768) }, pos, out _, false, KitchenRoomTypes))
+                {
+                    if (FindNearestItem(bot, new ItemInfo(-830135945), pos, out var carrotPos, false, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(carrotPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(carrotPos, GrabType.Pickup));
+                        RemoveItemMemory(bot, new ItemInfo(-830135945));
+                    }
+                    else if (TryGetItemMemory(bot, new ItemInfo(-1944015682), out carrotPos))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(carrotPos));
+                        EntityManager.AddComponentData(bot, new CInteractAction(carrotPos, true));
+                        RemoveItemMemory(bot, new ItemInfo(-1944015682));
+                        AddItemMemory(bot, new ItemInfo(-830135945), carrotPos);
+                    }
+                    else
+                    {
+                        // carrots
+                        GetNearestAppliance(pos, new HashSet<int> { -452101383 }, out var providerPos, out _);
+                        EntityManager.AddComponentData(bot, new CMoveTo(providerPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(providerPos, GrabType.Undefined));
+                    }
+                }
+                else if (FindNearestItem(bot, new ItemInfo(1867434040, 1296980128, -830135945), pos, out _, false, KitchenRoomTypes))
+                {
+                    if (FindNearestItem(bot, new ItemInfo(1005005768), pos, out var meatPos, false, KitchenRoomTypes))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(meatPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(meatPos, GrabType.Pickup));
+                        RemoveItemMemory(bot, new ItemInfo(1005005768));
+                    }
+                    else if (TryGetItemMemory(bot, new ItemInfo(1306214641), out meatPos))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(meatPos));
+                        EntityManager.AddComponentData(bot, new CInteractAction(meatPos, true));
+                        RemoveItemMemory(bot, new ItemInfo(1306214641));
+                        AddItemMemory(bot, new ItemInfo(1005005768), meatPos);
+                    }
+                    else
+                    {
+                        // meat
+                        GetNearestAppliance(pos, new HashSet<int> { -484165118 }, out var providerPos, out _);
+                        EntityManager.AddComponentData(bot, new CMoveTo(providerPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(providerPos, GrabType.Undefined));
+                    }
+                }
+                else
+                {
+                    // flour
+                    GetNearestAppliance(pos, new HashSet<int> { 925796718 }, out var providerPos, out _);
+                    EntityManager.AddComponentData(bot, new CMoveTo(providerPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(providerPos, GrabType.Undefined));
+                }
+            }
         }
 
         private void CoffeeFunction(Entity bot, List<ItemInfo> orders)
