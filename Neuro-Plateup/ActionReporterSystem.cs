@@ -15,7 +15,7 @@ namespace Neuro_Plateup
 {
     public class ActionReporterSystem : WebsocketSystemBase
     {
-        private EntityQuery BotQuery, IdleBotQuery, Feedback, Service, Fires, Messes, OrderQuery, HeldItems, Ingredients, BinsQuery, UnlockQuery, ProgressionQuery, PatienceQuery, TableQuery;
+        private EntityQuery BotQuery, IdleBotQuery, Feedback, Service, Fires, Messes, OrderQuery, HeldItems, Ingredients, MenuItems, BinsQuery, UnlockQuery, RebuildQuery, PatienceQuery, TableQuery;
 
         private readonly Dictionary<int, List<string>> RegisteredActions = new Dictionary<int, List<string>> { };
 
@@ -67,6 +67,7 @@ namespace Neuro_Plateup
                         typeof(CHeldBy)
                     ));
             Ingredients = GetEntityQuery(typeof(CAvailableIngredient));
+            MenuItems = GetEntityQuery(typeof(CMenuItem));
             BinsQuery = GetEntityQuery(typeof(CApplianceBin));
             UnlockQuery = GetEntityQuery(
                 new QueryHelper()
@@ -75,12 +76,10 @@ namespace Neuro_Plateup
                         typeof(CUnlockSelectPopup),
                         typeof(CCapturedUserInput)
                     ));
-            ProgressionQuery = GetEntityQuery(
+            RebuildQuery = GetEntityQuery(
                 new QueryHelper()
                     .All(
-                        typeof(CProgressionOption),
-                        typeof(CProgressionOption.Selected),
-                        typeof(CProgressionOption.Displayed)
+                        typeof(RebuildKitchen.CRebuildKitchen)
                     ));
             PatienceQuery = GetEntityQuery(typeof(CPatience));
             TableQuery = GetEntityQuery(typeof(CApplianceTable));
@@ -247,61 +246,21 @@ namespace Neuro_Plateup
         {
             base.OnUpdate();
 
-            // if (!ProgressionQuery.IsEmptyIgnoreFilter)
-            // {
-            //     var OrderItems = ProgressionQuery.ToEntityArray(Allocator.Temp);
-            //     foreach (var item in OrderItems)
-            //     {
-            //         if (Require<CProgressionOption>(item, out var comp))
-            //         {
-            //             Debug.Log(comp.ID);
-            //             if (Data.TryGet<Dish>(comp.ID, out var dish))
-            //             {
-            //                 foreach (var menuItem in dish.UnlocksMenuItems)
-            //                 {
-            //                     Debug.Log(menuItem.Item.ID);
-                                
-            //                 }
-            //             }
-            //         }
-            //     }
-            //     OrderItems.Dispose();
-            // }
+            var resetDishAction = false;
+            if (!RebuildQuery.IsEmptyIgnoreFilter)
+            {
+                RebuildReceipeTable(true);
+                resetDishAction = true;
+            }
 
             if (!isInitialized)
             {
                 isInitialized = true;
-
-                // NYI: This also needs to run when a dish is placed in the franchise mode & re-register the prepare dish action
-                var IngredientUnlocks = Ingredients.ToComponentDataArray<CAvailableIngredient>(Allocator.Temp);
-                var UnlockList = new HashSet<int>();
-                foreach (var unlock in IngredientUnlocks)
-                {
-                    UnlockList.Add(unlock.Ingredient);
-                }
-                IngredientUnlocks.Dispose();
-
-                foreach (var order in OrderNameRepository.Data)
-                {
-                    var flag = true;
-                    foreach (var ingredient in order.Value.Items)
-                    {
-                        if (!UnlockList.Contains(ingredient))
-                        {
-                            flag = false;
-                            break;
-                        }
-                    }
-                    if (flag)
-                    {
-                        Debug.LogWarning("Adding Dish: " + order.Key);
-                        SchemaFactory.Dishes.Add(order.Key);
-                    }
-                }
+                RebuildReceipeTable();
             }
-            if (HasSingleton<CSceneFirstFrame>())
+
+            if (HasSingleton<CSceneFirstFrame>() || Has<SIsDayFirstUpdate>() || Has<SIsNightFirstUpdate>())
             {
-                SchemaFactory.Dishes.Clear();
                 SchemaFactory.Players.Clear();
                 isInitialized = false;
 
@@ -324,10 +283,13 @@ namespace Neuro_Plateup
                 foreach (var bot in resetBots)
                 {
                     EntityManager.RemoveComponent<CMoveTo>(bot);
-                    EntityManager.RemoveComponent<CGrabAction>(bot);
                     EntityManager.RemoveComponent<CInteractAction>(bot);
-                    EntityManager.RemoveComponent<CBotAction>(bot);
+                    EntityManager.RemoveComponent<CGrabAction>(bot);
                     EntityManager.RemoveComponent<CBotActionRunning>(bot);
+                    EntityManager.RemoveComponent<CBotAction>(bot);
+                    EntityManager.RemoveComponent<CBotWaiting>(bot);
+                    EntityManager.RemoveComponent<CBotOrders>(bot);
+                    GetBuffer<CBotItems>(bot).Clear();
                 }
                 resetBots.Dispose();
             }
@@ -378,6 +340,7 @@ namespace Neuro_Plateup
                 foreach (var action in ActionsRegistry.ACTIONS)
                 {
                     var isAvailable =
+                        (!resetDishAction || action.Name != "prepare_dish") &&
                         (action.RequiredState & State) != 0 &&
                         (action.Roles & role) != 0 &&
                         action.IsAvailable(this, bot);
@@ -430,6 +393,79 @@ namespace Neuro_Plateup
             Bots.Dispose();
         }
 
+        public void RebuildReceipeTable(bool isFranchise = false)
+        {
+            SchemaFactory.Dishes.Clear();
+            var UnlockList = new HashSet<int>();
+            if (isFranchise)
+            {
+                Data.TryGet<Dish>(RebuildQuery.GetSingleton<RebuildKitchen.CRebuildKitchen>().Dish, out var dish);
+                foreach (var unlock in dish.UnlocksMenuItems)
+                {
+                    UnlockList.Add(unlock.Item.ID);
+                    if (!(unlock.Item is ItemGroup itemGroup))
+                    {
+                        continue;
+                    }
+                    foreach (ItemGroup.ItemSet derivedSet in itemGroup.DerivedSets)
+                    {
+                        foreach (Item item in derivedSet.Items)
+                        {
+                            if (derivedSet.RequiresUnlock)
+                            {
+                                bool flag = false;
+                                foreach (Dish.IngredientUnlock unlocksIngredient in dish.UnlocksIngredients)
+                                {
+                                    if (unlocksIngredient.MenuItem == itemGroup && unlocksIngredient.Ingredient == item)
+                                    {
+                                        flag = true;
+                                        break;
+                                    }
+                                }
+                                if (!flag)
+                                {
+                                    continue;
+                                }
+                            }
+                            UnlockList.Add(item.ID);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var IngredientUnlocks = Ingredients.ToComponentDataArray<CAvailableIngredient>(Allocator.Temp);
+                foreach (var unlock in IngredientUnlocks)
+                {
+                    UnlockList.Add(unlock.Ingredient);
+                }
+                IngredientUnlocks.Dispose();
+                var Items = MenuItems.ToComponentDataArray<CMenuItem>(Allocator.Temp);
+                foreach (var item in Items)
+                {
+                    UnlockList.Add(item.Item);
+                }
+                Items.Dispose();
+            }
+            foreach (var order in OrderNameRepository.Data)
+            {
+                var flag = true;
+                foreach (var ingredient in order.Value.Items)
+                {
+                    if (!UnlockList.Contains(ingredient))
+                    {
+                        flag = false;
+                        break;
+                    }
+                }
+                if (flag)
+                {
+                    SchemaFactory.Dishes.Add(order.Key);
+                }
+            }
+            // NYI: refresh the prepare action
+        }
+
         private string GetActionDescription(string action)
         {
             if (GLOBALSTRINGS.ACTIONS.ContainsKey(action))
@@ -461,7 +497,7 @@ namespace Neuro_Plateup
                     desc = card.Description;
                 }
             }
-            
+
             return desc;
         }
 
