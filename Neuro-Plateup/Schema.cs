@@ -10,11 +10,14 @@ namespace Neuro_Plateup
         [JsonProperty("type")]
         public string Type { get; set; }
 
-        [JsonProperty("properties")]
+        [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
         public Dictionary<string, JsonSchemaProperty> Properties { get; set; }
 
-        [JsonProperty("required")]
+        [JsonProperty("required", NullValueHandling = NullValueHandling.Ignore)]
         public List<string> Required { get; set; }
+
+        [JsonProperty("items", NullValueHandling = NullValueHandling.Ignore)]
+        public JsonSchema Items { get; set; }
     }
 
     public class JsonSchemaProperty
@@ -90,27 +93,91 @@ namespace Neuro_Plateup
                         },
                         Required = new List<string> { "player" }
                     };
+                case "prepare_dishes":
+                    return new JsonSchema
+                    {
+                        Type = "array",
+                        Items = new JsonSchema
+                        {
+                            Type = "object",
+                            Properties = new Dictionary<string, JsonSchemaProperty>
+                            {
+                                ["dish"] = new JsonSchemaProperty
+                                {
+                                    Type = "string",
+                                    Enum = Dishes
+                                },
+                                ["amount"] = new JsonSchemaProperty
+                                {
+                                    Type = "integer",
+                                    Minimum = 1,
+                                    Maximum = 4
+                                }
+                            },
+                            Required = new List<string> { "dish", "amount" }
+                        },
+                    };
 
                 default:
                     return null;
             }
         }
-        public static bool ValidateAgainstSchema(Dictionary<string, object> data, JsonSchema schema)
-        {
-            if (data == null)
-                return false;
 
-            // Check required fields
+        public static bool ValidateAgainstSchema(List<Dictionary<string, object>> dataArray, JsonSchema schema, out string reason)
+        {
+            reason = "";
+
+            if (dataArray == null || schema == null)
+            {
+                reason = "Parse error";
+                return false;
+            }
+
+            var seenDishes = new HashSet<string>();
+
+            foreach (var item in dataArray)
+            {
+                if (!(item is Dictionary<string, object> obj))
+                {
+                    reason = "Each item in the array must be an object.";
+                    return false;
+                }
+
+                if (!ValidateAgainstSchema(obj, schema.Items, out reason))
+                    return false;
+
+                if (obj.TryGetValue("dish", out var dishObj) && dishObj is string dish)
+                {
+                    if (!seenDishes.Add(dish))
+                    {
+                        reason = $"Duplicate dish found: {dish}";
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public static bool ValidateAgainstSchema(Dictionary<string, object> data, JsonSchema schema, out string reason)
+        {
+            reason = "";
+
+            if (data == null || schema == null)
+            {
+                reason = "Parse error";
+                return false;
+            }
+
             foreach (var requiredKey in schema.Required)
             {
                 if (!data.ContainsKey(requiredKey))
                 {
-                    Debug.LogWarning($"Missing required field: {requiredKey}");
+                    reason = $"Missing required key: {requiredKey}";
                     return false;
                 }
             }
 
-            // Check types and constraints
             foreach (var property in schema.Properties)
             {
                 if (!data.TryGetValue(property.Key, out var value))
@@ -122,28 +189,56 @@ namespace Neuro_Plateup
                 {
                     case "string":
                         if (!(value is string strValue))
+                        {
+                            reason = $"Key {property.Key} is wrong type";
                             return false;
+                        }
 
                         if (property.Value.MinLength.HasValue && strValue.Length < property.Value.MinLength.Value)
+                        {
+                            reason = $"Key {property.Key} has wrong value";
                             return false;
+                        }
+
                         if (property.Value.MaxLength.HasValue && strValue.Length > property.Value.MaxLength.Value)
+                        {
+                            reason = $"Key {property.Key} has wrong value";
                             return false;
+                        }
+
+                        if (property.Value.Enum != null && !property.Value.Enum.Contains(strValue))
+                        {
+                            reason = $"Key {property.Key} has wrong value";
+                            return false;
+                        }
+
                         break;
 
                     case "integer":
                         if (!(value is long || value is int))
+                        {
+                            reason = $"Key {property.Key} is wrong type";
                             return false;
+                        }
 
                         var intValue = Convert.ToInt32(value);
                         if (property.Value.Minimum.HasValue && intValue < property.Value.Minimum.Value)
+                        {
+                            reason = $"Key {property.Key} has wrong value";
                             return false;
+                        }
+
                         if (property.Value.Maximum.HasValue && intValue > property.Value.Maximum.Value)
+                        {
+                            reason = $"Key {property.Key} has wrong value";
                             return false;
+                        }
+
                         break;
 
                     default:
-                        Debug.LogWarning($"Unknown type '{expectedType}' in schema validation.");
-                        break;
+                        reason = $"Key {property.Key} is of unsupported type";
+                        return false;
                 }
             }
 

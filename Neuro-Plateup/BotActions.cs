@@ -109,7 +109,7 @@ namespace Neuro_Plateup
             },
             new BotAction
             {
-                Name = "prepare_dish",
+                Name = "prepare_dishes",
                 RequiredState = GameState.Day | GameState.Franchise,
                 Roles = BotRole.Chef,
                 IsAvailable = (system, bot) => system.AlwaysAvailable(bot)

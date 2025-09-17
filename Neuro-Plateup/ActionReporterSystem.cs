@@ -105,6 +105,7 @@ namespace Neuro_Plateup
         {
             var action = new NeuroAPI.Answer();
             Dictionary<string, object> data = null;
+            List<Dictionary<string, object>> dataArray = null;
             try
             {
                 action = JsonConvert.DeserializeObject<NeuroAPI.Answer>(payload);
@@ -119,20 +120,36 @@ namespace Neuro_Plateup
 
                 if (!string.IsNullOrEmpty(action.data.Data))
                 {
-                    try
-                    {
-                        var jObject = JObject.Parse(action.data.Data);
-                        data = jObject.ToObject<Dictionary<string, object>>();
-                    }
-                    catch (Exception)
-                    {
-                        throw new Exception("Malformed JSON");
-                    }
-
                     var schema = SchemaFactory.GetSchema(action.data.name);
-                    if (!SchemaFactory.ValidateAgainstSchema(data, schema))
+                    if (action.data.name == "prepare_dishes")
                     {
-                        throw new Exception("Invalid json");
+                        try
+                        {
+                            dataArray = JArray.Parse(action.data.Data).ToObject<List<Dictionary<string, object>>>();
+                        }
+                        catch (Exception)
+                        {
+                            throw new Exception("Malformed JSON");
+                        }
+                        if (!SchemaFactory.ValidateAgainstSchema(dataArray, schema, out var reason))
+                        {
+                            throw new Exception("Invalid json: " + reason);
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            data = JObject.Parse(action.data.Data).ToObject<Dictionary<string, object>>();
+                        }
+                        catch (Exception)
+                        {
+                            throw new Exception("Malformed JSON");
+                        }
+                        if (!SchemaFactory.ValidateAgainstSchema(data, schema, out var reason))
+                        {
+                            throw new Exception("Invalid json: " + reason);
+                        }
                     }
                 }
             }
@@ -224,8 +241,21 @@ namespace Neuro_Plateup
                     }
                     else
                     {
-                        if (data == null)
+                        if (data == null && dataArray == null)
                         {
+                            EntityManager.AddComponentData(bot, new CBotAction(action.data.name));
+                        }
+                        else if (action.data.name == "prepare_dishes")
+                        {
+                            var buffer = EntityManager.AddBuffer<CBotOrders>(bot);
+                            foreach (var e in dataArray)
+                            {
+                                OrderNameRepository.TryGetValues(e["dish"].ToString(), out var ID, out var Items);
+                                var amount = Convert.ToInt32(e["amount"]);
+
+                                for (var i = 0; i < amount; i++)
+                                    buffer.Add(new CBotOrders(ID, Items));
+                            }
                             EntityManager.AddComponentData(bot, new CBotAction(action.data.name));
                         }
                         else

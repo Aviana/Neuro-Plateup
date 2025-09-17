@@ -62,7 +62,7 @@ namespace Neuro_Plateup
                 { "clean_mess", CleanMess },
                 { "serve", Serve },
                 { "prepare_order", Cook },
-                { "prepare_dish", Prepare },
+                { "prepare_dishes", Prepare },
                 { "empty_bin", ClearBin },
                 { "wash_plates", WashPlates },
                 { "return_plates", ReturnPlates }
@@ -84,11 +84,6 @@ namespace Neuro_Plateup
 
         protected override void OnUpdate()
         {
-            if (Has<CSceneFirstFrame>())
-            {
-                // NYI: Make a list of available dishes???
-            }
-
             var Bots = BotQuery.ToEntityArray(Allocator.Temp);
             foreach (var bot in Bots)
             {
@@ -423,20 +418,7 @@ namespace Neuro_Plateup
             if (HasBuffer<CBotOrders>(bot))
                 return;
 
-            if (Has<CBotActionRunning>(bot))
-            {
-                EntityManager.RemoveComponent<CBotActionRunning>(bot);
-                EntityManager.RemoveComponent<CBotAction>(bot);
-                return;
-            }
-            else
-            {
-                EntityManager.AddComponent<CBotActionRunning>(bot);
-            }
-
-            OrderNameRepository.TryGetValues(payload, out var ID, out var Items);
-            var buffer = EntityManager.AddBuffer<CBotOrders>(bot);
-            buffer.Add(new CBotOrders(ID, Items));
+            EntityManager.RemoveComponent<CBotAction>(bot);
         }
 
         private void Cook(Entity bot, string payload)
