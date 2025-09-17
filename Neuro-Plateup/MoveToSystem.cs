@@ -174,12 +174,10 @@ namespace Neuro_Plateup
             {
                 var evt = new InputUpdateEvent();
                 evt.User = GetComponent<CPlayer>(bot).ID;
-                Vector3 playerPos = GetComponent<CPosition>(bot).Position.Rounded();
+                Vector3 playerPos = GetComponent<CPosition>(bot).Position;
                 Vector3 destination = GetComponent<CMoveTo>(bot).Position;
 
-                // NYI: Do not do full pathfinding on every frame
-                // NYI: Handling getting stuck
-                if (GetWaypoint(playerPos, destination, out Vector3 wp, out int steps))
+                if (GetWaypoint(playerPos.Rounded(), destination, out Vector3 wp, out int steps))
                 {
                     evt.State.Movement = new Vector2(wp.x - playerPos.x, wp.z - playerPos.z).normalized;
                     input.Send(evt);
