@@ -574,9 +574,9 @@ namespace Neuro_Plateup
             if (GetComponentOfHeld<CItem>(bot, out var comp))
             {
                 var pos = GetComponent<CPosition>(bot).Position;
-                if (comp.ID == 895813906 && cookingSystem.GetNearestAppliance(pos, CookingSystem.CookingAppliances, out var target, out var ID, true))
+                if (comp.ID == 895813906 && cookingSystem.GetNearestAppliance(pos, CookingSystem.CookingAppliances, out var target, out _, true))
                 {
-                    // burn the witch
+                    cookingSystem.HobInteraction(bot, target, GrabType.Drop);
                 }
                 else if (comp.ID == -1660145659 || comp.ID == 895813906)
                 {

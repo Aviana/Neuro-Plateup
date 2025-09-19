@@ -18,7 +18,7 @@ namespace Neuro_Plateup
             { "2 Mandarin Slices", new ItemInfo(-263257027, new FixedListInt64 { 448483396, 448483396 }) },
             { "4 Mandarin Slices", new ItemInfo(226055037, new FixedListInt64 { 448483396, 448483396, 448483396, 448483396 }) },
             { "Pumpkin Seeds", new ItemInfo(1018675021, new FixedListInt64 { 1018675021 }) },
-            { "Bamboo", new ItemInfo(880804869, new FixedListInt64 { 880804869 }) },
+            { "Bamboo", new ItemInfo(2037858460, new FixedListInt64 { 2037858460 }) },
             { "Broccoli", new ItemInfo(-1520921913, new FixedListInt64 { -1520921913 }) },
             { "Chips", new ItemInfo(-259844528, new FixedListInt64 { -259844528 }) },
             { "Corn on the Cob", new ItemInfo(-1640761177, new FixedListInt64 { -1640761177 }) },
