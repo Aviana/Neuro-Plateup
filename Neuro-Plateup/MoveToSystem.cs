@@ -311,6 +311,8 @@ namespace Neuro_Plateup
                 return true;
 
             var ent = TileManager.GetPrimaryOccupant(vec);
+            if (ent == default(Entity))
+                return false;
 
             if (Require<CApplianceChair>(ent, out var comp) && comp.IsInUse)
                 return true;

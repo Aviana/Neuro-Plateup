@@ -662,6 +662,10 @@ namespace Neuro_Plateup
                     }
                 }
             }
+
+            if (orderedFood.Contains(new ItemInfo(41735497)) && CookingSystem.HasCake)
+                flag = true;
+
             Items.Dispose();
             return flag;
         }

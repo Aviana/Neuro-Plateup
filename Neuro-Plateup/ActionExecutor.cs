@@ -364,6 +364,11 @@ namespace Neuro_Plateup
                     servables.Add(entry.Value, new ItemInfo(entry.Key));
                 }
 
+                if (cookingSystem.FindNearestItem(bot, new ItemInfo(41735497), GetComponent<CPosition>(bot).Position.Rounded(), out var cakePos, true, CookingSystem.NonKitchenRoomTypes))
+                {
+                    servables.Add(cakePos, new ItemInfo(41735497));
+                };
+
                 if (servables.Count < 1)
                 {
                     EntityManager.RemoveComponent<CBotAction>(bot);

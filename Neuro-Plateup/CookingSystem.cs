@@ -24,6 +24,8 @@ namespace Neuro_Plateup
 
         public static Dictionary<int, Vector3> ServeProviders = new Dictionary<int, Vector3>();
 
+        public static bool HasCake;
+
         public static readonly HashSet<RoomType> AllRoomTypes = new HashSet<RoomType>
         {
             RoomType.Bedroom,
@@ -184,6 +186,9 @@ namespace Neuro_Plateup
             {
                 ServeProviders.Clear();
                 var pos = GetFrontDoor();
+
+                HasCake = GetNearestAppliance(pos, new HashSet<int> { 143484231 }, out _, out _, null, null, NonKitchenRoomTypes);
+
                 if (GetNearestAppliance(pos, new HashSet<int> { 1377093570 }, out var cupPos, out _, null, null, NonKitchenRoomTypes))
                 {
                     ServeProviders[-1721929071] = cupPos;
@@ -203,10 +208,6 @@ namespace Neuro_Plateup
                 if (GetNearestAppliance(pos, new HashSet<int> { 303858729 }, out var crackerPos, out _, null, null, NonKitchenRoomTypes))
                 {
                     ServeProviders[749675166] = crackerPos;
-                }
-                if (GetNearestAppliance(pos, new HashSet<int> { 143484231 }, out var cakePos, out _, null, null, NonKitchenRoomTypes))
-                {
-                    ServeProviders[41735497] = cakePos;
                 }
                 if (GetNearestAppliance(pos, new HashSet<int> { -2133205155 }, out var sugarPos, out _, null, null, NonKitchenRoomTypes))
                 {
