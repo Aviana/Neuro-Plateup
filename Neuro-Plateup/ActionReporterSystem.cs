@@ -319,6 +319,7 @@ namespace Neuro_Plateup
                     EntityManager.RemoveComponent<CBotAction>(bot);
                     EntityManager.RemoveComponent<CBotWaiting>(bot);
                     EntityManager.RemoveComponent<CBotOrders>(bot);
+                    EntityManager.RemoveComponent<CBotWatching>(bot);
                     GetBuffer<CBotItems>(bot).Clear();
                 }
                 resetBots.Dispose();

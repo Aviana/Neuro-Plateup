@@ -144,6 +144,7 @@ namespace Neuro_Plateup
             EntityManager.RemoveComponent<CBotAction>(bot);
             EntityManager.RemoveComponent<CBotWaiting>(bot);
             EntityManager.RemoveComponent<CBotOrders>(bot);
+            EntityManager.RemoveComponent<CBotWatching>(bot);
             GetBuffer<CBotItems>(bot).Clear();
         }
 
@@ -259,6 +260,8 @@ namespace Neuro_Plateup
         private void Serve(Entity bot, string payload)
         {
             // NYI: Trays
+            // NYI: Clear condiment off of table if something else is requested (Ketchup / Mustard)
+
             if (HasComponent<CMoveTo>(bot) || HasComponent<CGrabAction>(bot))
                 return;
 
@@ -335,6 +338,7 @@ namespace Neuro_Plateup
                 {
                     // Dish in hand does not have a delivery target
                     // NYI: put it back?
+                    EmptyHands(bot);
                     EntityManager.RemoveComponent<CBotAction>(bot);
                     return;
                 }
@@ -375,7 +379,8 @@ namespace Neuro_Plateup
                     return;
                 }
 
-                Vector3 target = new Vector3();
+                Vector3 foodPos = new Vector3();
+                Vector3 tablePos = new Vector3();
                 ItemInfo targetInfo = new ItemInfo();
                 float currentPatience = float.MaxValue;
                 foreach (var servable in servables)
@@ -385,7 +390,8 @@ namespace Neuro_Plateup
                         if (entry.Key < currentPatience && entry.Value.Items.Contains(servable.Value))
                         {
                             currentPatience = entry.Key;
-                            target = servable.Key;
+                            foodPos = servable.Key;
+                            tablePos = entry.Value.Position;
                             targetInfo = servable.Value;
                         }
                     }
@@ -398,23 +404,32 @@ namespace Neuro_Plateup
                     return;
                 }
 
-                if (CookingSystem.ServeProviders.Values.Contains(target))
+                var ent = TileManager.GetPrimaryOccupant(tablePos);
+                if (GetComponentOfHeld<CItem>(ent, out _))
                 {
-                    cookingSystem.ApplianceCapacity(TileManager.GetPrimaryOccupant(target), out var current, out var maximum);
+                    // There is something on our serve target
+                    EntityManager.AddComponentData(bot, new CMoveTo(foodPos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(foodPos, GrabType.Pickup));
+                    return;
+                }
+
+                if (CookingSystem.ServeProviders.Values.Contains(foodPos))
+                {
+                    cookingSystem.ApplianceCapacity(ent, out var current, out var maximum);
                     if (current != maximum && current == 0 || targetInfo.ID == 41735497)
                     {
-                        if (!cookingSystem.FindNearestItem(bot, targetInfo, GetComponent<CPosition>(bot).Position.Rounded(), out target, false, CookingSystem.NonKitchenRoomTypes))
+                        if (!cookingSystem.FindNearestItem(bot, targetInfo, GetComponent<CPosition>(bot).Position.Rounded(), out foodPos, false, CookingSystem.NonKitchenRoomTypes))
                         {
                             Debug.LogError("Could not find " + targetInfo.ID);
                         }
                     }
-                    EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Undefined));
+                    EntityManager.AddComponentData(bot, new CGrabAction(foodPos, GrabType.Undefined));
                 }
                 else
                 {
-                    EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Pickup));
+                    EntityManager.AddComponentData(bot, new CGrabAction(foodPos, GrabType.Pickup));
                 }
-                EntityManager.AddComponentData(bot, new CMoveTo(target));
+                EntityManager.AddComponentData(bot, new CMoveTo(foodPos));
             }
         }
 

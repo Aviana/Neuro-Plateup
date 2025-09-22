@@ -22,6 +22,17 @@ namespace Neuro_Plateup
         }
     }
 
+    public struct CBotWatching : IBufferElementData
+    {
+        public Vector3 Position;
+        public int itemID;
+        public CBotWatching(Vector3 position, int resultID)
+        {
+            Position = position;
+            itemID = resultID;
+        }
+    }
+
     public struct CBotItems : IBufferElementData
     {
         public ItemInfo Item;
