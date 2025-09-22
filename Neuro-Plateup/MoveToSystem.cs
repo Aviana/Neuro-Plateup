@@ -92,10 +92,7 @@ namespace Neuro_Plateup
                 1936421857,  // Parcel
                 2041631136,  // Wallpaper Applicator
                 1732122842,  // Flooring Applicator
-                -1723340146, // Robot Buffer
-                -2147057861, // Robot Mop
                 2044081363,  // Levitation Line
-                -1992638820, // Enchanted Broom
                 -560953757,  // Ghost Scrubber
                 689268680,   // Ghostly Rolling Pin
                 1313278365,  // Ghostly Knife
@@ -318,7 +315,7 @@ namespace Neuro_Plateup
                 return true;
 
             if (Require<CAppliance>(ent, out var comp2) && Whitelist.Contains(comp2.ID))
-                return true;
+                return false;
 
             if (HasComponent<CAppliance>(ent) && !HasComponent<CApplianceChair>(ent) && !HasComponent<CSlowPlayer>(ent) && !HasComponent<CDoesNotOccupy>(ent) && !HasComponent<CAllowMobilePathing>(ent))
             {
