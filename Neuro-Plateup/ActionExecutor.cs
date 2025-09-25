@@ -712,7 +712,7 @@ namespace Neuro_Plateup
                         binPos = GetComponent<CPosition>(GetEntity<CApplianceExternalBin>());
                     }
                     EntityManager.AddComponentData(bot, new CMoveTo(binPos));
-                    EntityManager.AddComponentData(bot, new CInteractAction(binPos, false));
+                    EntityManager.AddComponentData(bot, new CGrabAction(binPos, GrabType.Fill));
                 }
                 else
                 {

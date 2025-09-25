@@ -53,7 +53,7 @@ namespace Neuro_Plateup
                 var appliance = TileManager.GetPrimaryOccupant(comp.Position);
                 var hasHeld = GetComponentOfHeld<CItem>(appliance, out _) ^ GetComponentOfHeld<CItem>(bot, out _);
 
-                if ((comp.Type == GrabType.Drop || comp.Type == GrabType.Pickup) && !hasHeld)
+                if ((comp.Type == GrabType.Drop && !hasHeld || comp.Type == GrabType.Pickup) && !hasHeld)
                 {
                     grabInfo[ID] = 0;
                     EntityManager.RemoveComponent<CGrabAction>(bot);
@@ -75,7 +75,7 @@ namespace Neuro_Plateup
                 {
                     if (comp3.Type == InteractionType.Look)
                     {
-                        if (grabInfo[ID] < 10)
+                        if (grabInfo[ID] < 20)
                         {
                             grabInfo[ID]++;
                         }
@@ -85,7 +85,6 @@ namespace Neuro_Plateup
                             evt.State.GrabAction = ButtonState.Pressed;
                             input.Send(evt);
                         }
-                        continue;
                     }
                     else if (comp3.Type == InteractionType.Grab && comp3.Result == InteractionResult.Performed)
                     {
@@ -93,9 +92,12 @@ namespace Neuro_Plateup
                         input.Send(evt);
                         grabInfo[ID] = 0;
                         EntityManager.RemoveComponent<CGrabAction>(bot);
-                        continue;
+                        
                     }
+                    continue;
                 }
+
+                grabInfo[ID] = 0;
                 Vector3 posBot = GetComponent<CPosition>(bot).Position;
                 evt.State.Movement = new Vector2(comp.Position.x - posBot.x, comp.Position.z - posBot.z);
                 input.Send(evt);
