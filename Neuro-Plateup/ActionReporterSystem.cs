@@ -87,7 +87,7 @@ namespace Neuro_Plateup
             gameStateQueries = new List<(EntityQuery, GameState)>
             {
                 (GetEntityQuery(typeof(SClearScene)), GameState.None),
-                (GetEntityQuery(new QueryHelper().Any(typeof(CGamePauseRequest), typeof(CCaptureInput)).None(typeof(CCapturePassthrough))), GameState.Paused),
+                (GetEntityQuery(new QueryHelper().Any(typeof(CCaptureInput)).None(typeof(CCapturePassthrough))), GameState.Paused),
                 (GetEntityQuery(typeof(SGameOver)), GameState.GameOver),
                 (GetEntityQuery(typeof(SFranchiseBuilderMarker)), GameState.FranchiseBuilder),
                 (GetEntityQuery(typeof(SIsNightTime)), GameState.Night),

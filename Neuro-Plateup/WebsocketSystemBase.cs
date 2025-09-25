@@ -7,7 +7,7 @@ using System.Threading;
 using System.IO;
 using WebSocketSharp;
 using Newtonsoft.Json;
-using System.Windows.Forms;
+using UnityEngine;
 
 namespace Neuro_Plateup
 {
@@ -86,7 +86,7 @@ namespace Neuro_Plateup
             if (_isInitialized) return;
             _isInitialized = true;
 
-            _clientConfigs = ReadWebSocketCsv(Application.StartupPath + "\\Mods\\Neuro-Plateup\\bots.csv");
+            _clientConfigs = ReadWebSocketCsv(System.Windows.Forms.Application.StartupPath + "\\Mods\\Neuro-Plateup\\bots.csv");
 
             _isRunning = true;
 

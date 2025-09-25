@@ -50,20 +50,13 @@ namespace Neuro_Plateup
             pressed.State.SecondaryAction1 = ButtonState.Pressed;
             pressed.State.MenuSelect = ButtonState.Pressed;
 
-            var BotEntities = IdleBotQuery.ToEntityArray(Allocator.Temp);
-            foreach (var bot in BotEntities)
-            {
-                released.User = GetComponent<CPlayer>(bot).ID;
-                input.Send(released);
-            }
-            BotEntities.Dispose();
-
             if (!PopupQuery.IsEmptyIgnoreFilter)
             {
                 IObjectView view = null;
                 var Popups = PopupQuery.ToComponentDataArray<CLinkedView>(Allocator.Temp);
                 foreach (var popup in Popups)
                 {
+                    // If there are multiple popups find the one that takes precedence
                     view = EntityViewManager.EntityViews[popup.Identifier];
                     if (Popups.Length == 1 || view is GenericChoiceView || view is EndOfDayPopupView)
                     {
@@ -119,6 +112,16 @@ namespace Neuro_Plateup
                     }
                 }
                 Bots.Dispose();
+            }
+            else
+            {
+                var BotEntities = IdleBotQuery.ToEntityArray(Allocator.Temp);
+                foreach (var bot in BotEntities)
+                {
+                    released.User = GetComponent<CPlayer>(bot).ID;
+                    input.Send(released);
+                }
+                BotEntities.Dispose();
             }
         }
     }
