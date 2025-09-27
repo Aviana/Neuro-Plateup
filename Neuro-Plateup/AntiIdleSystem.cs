@@ -9,10 +9,16 @@ using System.Collections.Generic;
 
 namespace Neuro_Plateup
 {
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class AntiIdleSystem : GenericSystemBase, IModSystem
     {
         private EntityQuery BotQuery, IdleBotQuery, PopupQuery;
         private FakeInput input;
+
+        private FieldInfo GenericField;
+        private FieldInfo EndOfDayField;
+        private FieldInfo StartDayField;
+        private FieldInfo EndPracticeField;
 
         protected override void Initialise()
         {
@@ -38,17 +44,16 @@ namespace Neuro_Plateup
                         typeof(SStartDayWarnings)
                     ));
             input = new FakeInput();
+            GenericField = typeof(GenericChoiceView).GetField("Consent", BindingFlags.NonPublic | BindingFlags.Instance);
+            EndOfDayField = typeof(EndOfDayPopupView).GetField("Consent", BindingFlags.NonPublic | BindingFlags.Instance);
+            StartDayField = typeof(StartDayWarningView).GetField("ConsentElement", BindingFlags.NonPublic | BindingFlags.Instance);
+            EndPracticeField = typeof(EndPracticeView).GetField("Consents", BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
         protected override void OnUpdate()
         {
             if (BotQuery.IsEmptyIgnoreFilter)
                 return;
-
-            var released = new InputUpdateEvent();
-            var pressed = new InputUpdateEvent();
-            pressed.State.SecondaryAction1 = ButtonState.Pressed;
-            pressed.State.MenuSelect = ButtonState.Pressed;
 
             if (!PopupQuery.IsEmptyIgnoreFilter)
             {
@@ -58,7 +63,7 @@ namespace Neuro_Plateup
                 {
                     // If there are multiple popups find the one that takes precedence
                     view = EntityViewManager.EntityViews[popup.Identifier];
-                    if (Popups.Length == 1 || view is GenericChoiceView || view is EndOfDayPopupView)
+                    if (view is GenericChoiceView || view is EndOfDayPopupView)
                     {
                         break;
                     }
@@ -67,47 +72,90 @@ namespace Neuro_Plateup
 
                 var Bots = BotQuery.ToEntityArray(Allocator.Temp);
 
-                if (view is GenericChoiceView || view is EndOfDayPopupView)
+                if (view is GenericChoiceView)
                 {
-                    var ConsentField = view.GetType().GetField("Consent", BindingFlags.NonPublic | BindingFlags.Instance);
-                    var Consent = ConsentField.GetValue(view) as ConsentElement;
+                    var Consent = GenericField.GetValue(view) as ConsentElement;
 
                     foreach (var bot in Bots)
                     {
+                        var evt = new InputUpdateEvent();
                         var ID = GetComponent<CPlayer>(bot).ID;
+                        evt.User = ID;
                         if (!Consent.GetConsent(ID))
                         {
-                            pressed.User = ID;
-                            input.Send(pressed);
+                            evt.State.MenuSelect = ButtonState.Pressed;
+                            input.Send(evt);
+                            evt.State.MenuSelect = ButtonState.Released;
+                            input.Send(evt);
+                        }
+                        else
+                        {
+                            input.Send(evt);
+                        }
+                    }
+                }
+                else if (view is EndOfDayPopupView)
+                {
+                    var Consent = EndOfDayField.GetValue(view) as ConsentElement;
+
+                    foreach (var bot in Bots)
+                    {
+                        var evt = new InputUpdateEvent();
+                        var ID = GetComponent<CPlayer>(bot).ID;
+                        evt.User = ID;
+                        if (!Consent.GetConsent(ID))
+                        {
+                            evt.State.MenuSelect = ButtonState.Pressed;
+                            input.Send(evt);
+                            evt.State.MenuSelect = ButtonState.Released;
+                            input.Send(evt);
+                        }
+                        else
+                        {
+                            input.Send(evt);
                         }
                     }
                 }
                 else if (view is StartDayWarningView)
                 {
-                    var ConsentField = typeof(StartDayWarningView).GetField("ConsentElement", BindingFlags.NonPublic | BindingFlags.Instance);
-                    var Consent = ConsentField.GetValue(view) as ConsentElement;
+                    var Consent = StartDayField.GetValue(view) as ConsentElement;
 
                     foreach (var bot in Bots)
                     {
+                        var evt = new InputUpdateEvent();
                         var ID = GetComponent<CPlayer>(bot).ID;
+                        evt.User = ID;
                         if (!Consent.GetConsent(ID))
                         {
-                            pressed.User = ID;
-                            input.Send(pressed);
+                            evt.State.SecondaryAction1 = ButtonState.Pressed;
+                            input.Send(evt);
+                            evt.State.SecondaryAction1 = ButtonState.Released;
+                            input.Send(evt);
+                        }
+                        else if (!HasComponent<CMoveTo>(bot) && !HasComponent<CGrabAction>(bot) && !HasComponent<CInteractAction>(bot))
+                        {
+                            input.Send(evt);
                         }
                     }
                 }
                 else if (view is EndPracticeView)
                 {
-                    var ConsentField = typeof(EndPracticeView).GetField("Consents", BindingFlags.NonPublic | BindingFlags.Instance);
-                    var Consents = ConsentField.GetValue(view) as HashSet<int>;
+                    var Consents = EndPracticeField.GetValue(view) as HashSet<int>;
                     foreach (var bot in Bots)
                     {
+                        var evt = new InputUpdateEvent();
                         var ID = GetComponent<CPlayer>(bot).ID;
+                        evt.User = ID;
                         if (!Consents.Contains(ID))
                         {
-                            pressed.User = ID;
-                            input.Send(pressed);
+                            evt.State.SecondaryAction1 = ButtonState.Pressed;
+                            input.Send(evt);
+                            evt.State.SecondaryAction1 = ButtonState.Released;
+                            input.Send(evt);
+                        }
+                        else if (!HasComponent<CMoveTo>(bot) && !HasComponent<CGrabAction>(bot) && !HasComponent<CInteractAction>(bot))
+                        {
+                            input.Send(evt);
                         }
                     }
                 }
@@ -118,8 +166,9 @@ namespace Neuro_Plateup
                 var BotEntities = IdleBotQuery.ToEntityArray(Allocator.Temp);
                 foreach (var bot in BotEntities)
                 {
-                    released.User = GetComponent<CPlayer>(bot).ID;
-                    input.Send(released);
+                    var evt = new InputUpdateEvent();
+                    evt.User = GetComponent<CPlayer>(bot).ID;
+                    input.Send(evt);
                 }
                 BotEntities.Dispose();
             }
