@@ -548,7 +548,7 @@ namespace Neuro_Plateup
                 return false;
 
             var buffer = GetBuffer<CUnlockSelectPopupOption>(UnlockQuery.GetSingletonEntity());
-            if (buffer[1].ID == 0)
+            if (buffer[0].ID == 0 || buffer[1].ID == 0)
                 return false;
 
             return true;

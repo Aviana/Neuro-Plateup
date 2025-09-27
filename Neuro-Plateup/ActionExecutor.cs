@@ -854,6 +854,8 @@ namespace Neuro_Plateup
             evt.User = GetComponent<CPlayer>(bot).ID;
             evt.State.MenuLeft = ButtonState.Pressed;
             input.Send(evt);
+            evt.State.MenuLeft = ButtonState.Released;
+            input.Send(evt);
             EntityManager.RemoveComponent<CBotAction>(bot);
         }
 
@@ -862,6 +864,8 @@ namespace Neuro_Plateup
             var evt = new InputUpdateEvent();
             evt.User = GetComponent<CPlayer>(bot).ID;
             evt.State.MenuRight = ButtonState.Pressed;
+            input.Send(evt);
+            evt.State.MenuRight = ButtonState.Released;
             input.Send(evt);
             EntityManager.RemoveComponent<CBotAction>(bot);
         }

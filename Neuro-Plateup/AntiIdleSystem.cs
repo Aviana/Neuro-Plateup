@@ -12,13 +12,10 @@ namespace Neuro_Plateup
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class AntiIdleSystem : GenericSystemBase, IModSystem
     {
-        private EntityQuery BotQuery, IdleBotQuery, PopupQuery;
+        private EntityQuery BotQuery, IdleBotQuery, PopupQuery, UnlockQuery;
         private FakeInput input;
 
-        private FieldInfo GenericField;
-        private FieldInfo EndOfDayField;
-        private FieldInfo StartDayField;
-        private FieldInfo EndPracticeField;
+        private FieldInfo GenericField, EndOfDayField, StartDayField, EndPracticeField;
 
         protected override void Initialise()
         {
@@ -41,7 +38,15 @@ namespace Neuro_Plateup
                     ).Any(
                         typeof(LeavePracticeMode.SLeavePracticeView),
                         typeof(CPopup),
-                        typeof(SStartDayWarnings)
+                        typeof(SStartDayWarnings),
+                        typeof(CUnlockSelectPopup)
+                    ));
+            UnlockQuery = GetEntityQuery(
+                new QueryHelper()
+                    .All(
+                        typeof(CLinkedView),
+                        typeof(CUnlockSelectPopup),
+                        typeof(CCapturedUserInput)
                     ));
             input = new FakeInput();
             GenericField = typeof(GenericChoiceView).GetField("Consent", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -157,6 +162,22 @@ namespace Neuro_Plateup
                         {
                             input.Send(evt);
                         }
+                    }
+                }
+                else if (view is UnlockSelectPopupView)
+                {
+                    var buffer = GetBuffer<CUnlockSelectPopupOption>(UnlockQuery.GetSingletonEntity());
+                    var evt = new InputUpdateEvent();
+
+                    if (buffer[0].ID == 0 || buffer[1].ID == 0)
+                    {
+                        evt.State.MenuLeft = ButtonState.Pressed;
+                    }
+                    foreach (var bot in Bots)
+                    {
+                        var ID = GetComponent<CPlayer>(bot).ID;
+                        evt.User = ID;
+                        input.Send(evt);
                     }
                 }
                 Bots.Dispose();
