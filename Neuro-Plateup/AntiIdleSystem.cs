@@ -180,6 +180,16 @@ namespace Neuro_Plateup
                         input.Send(evt);
                     }
                 }
+                else
+                {
+                    var evt = new InputUpdateEvent();
+                    foreach (var bot in Bots)
+                    {
+                        var ID = GetComponent<CPlayer>(bot).ID;
+                        evt.User = ID;
+                        input.Send(evt);
+                    }
+                }
                 Bots.Dispose();
             }
             else
