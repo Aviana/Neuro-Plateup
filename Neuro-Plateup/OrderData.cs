@@ -390,19 +390,19 @@ namespace Neuro_Plateup
             { "Stir Fry with Bamboo", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, 880804869 }) },
             { "Stir Fry with Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -336580972 }) },
 
-            { "Stir Fry with Carrot and Meat", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1406021079 }) },
-            { "Stir Fry with Carrot and Broccoli", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1406021079 }) },
-            { "Stir Fry with Carrot and Bamboo", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1406021079 }) },
-            { "Stir Fry with Carrot and Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1406021079 }) },
+            { "Stir Fry with Carrot and Meat", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1406021079, -1018018897 }) },
+            { "Stir Fry with Carrot and Broccoli", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1406021079, 1453647256 }) },
+            { "Stir Fry with Carrot and Bamboo", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1406021079, 880804869 }) },
+            { "Stir Fry with Carrot and Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1406021079, -336580972 }) },
 
-            { "Stir Fry with Meat and Broccoli", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1018018897 }) },
-            { "Stir Fry with Meat and Bamboo", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1018018897 }) },
-            { "Stir Fry with Meat and Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1018018897 }) },
+            { "Stir Fry with Meat and Broccoli", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1018018897, 1453647256 }) },
+            { "Stir Fry with Meat and Bamboo", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1018018897, 880804869 }) },
+            { "Stir Fry with Meat and Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1018018897, -336580972 }) },
 
-            { "Stir Fry with Broccoli and Bamboo", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, 1453647256 }) },
-            { "Stir Fry with Broccoli and Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, 1453647256 }) },
+            { "Stir Fry with Broccoli and Bamboo", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, 1453647256, 880804869 }) },
+            { "Stir Fry with Broccoli and Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, 1453647256, -336580972 }) },
 
-            { "Stir Fry with Bamboo and Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, 880804869 }) },
+            { "Stir Fry with Bamboo and Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, 880804869, -336580972 }) },
 
             { "Soy Sauce", new ItemInfo(1190974918, new FixedListInt64 { 1190974918 }) },
         };
