@@ -24,8 +24,7 @@ namespace Neuro_Plateup
                         typeof(CBotControl),
                         typeof(CGrabAction)
                     ).None(
-                        typeof(CMoveTo),
-                        typeof(CInteractAction)
+                        typeof(CMoveTo)
                     ));
             InputCapturesQuery = GetEntityQuery(
                 new QueryHelper()

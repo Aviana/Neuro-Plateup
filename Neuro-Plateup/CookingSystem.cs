@@ -244,10 +244,6 @@ namespace Neuro_Plateup
                         return;
                     }
                     // We are waiting for an unclosed oven - close it.
-                    if (HasComponent<CRequiresActivation>(ent) && HasComponent<CIsInactive>(ent))
-                    {
-                        EntityManager.AddComponentData(bot, new CInteractAction(comp.Position, false));
-                    }
                 }
                 else
                 {
@@ -1046,11 +1042,22 @@ namespace Neuro_Plateup
         public bool HobInteraction(Entity bot, Vector3 pos, GrabType grab)
         {
             var ent = TileManager.GetPrimaryOccupant(pos);
-            if (HasComponent<CRequiresActivation>(ent) && !HasComponent<CIsInactive>(ent))
+            if (HasComponent<CRequiresActivation>(ent))
             {
-                EntityManager.AddComponentData(bot, new CMoveTo(pos));
-                EntityManager.AddComponentData(bot, new CInteractAction(pos, false));
-                return false;
+                if (!HasComponent<CIsInactive>(ent))
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(pos));
+                    EntityManager.AddComponentData(bot, new CInteractAction(pos, false));
+                    return false;
+                }
+                else
+                {
+                    EntityManager.AddComponentData(bot, new CMoveTo(pos));
+                    EntityManager.AddComponentData(bot, new CGrabAction(pos, grab));
+                    if (grab == GrabType.Drop || grab == GrabType.CombineDrop)
+                        EntityManager.AddComponentData(bot, new CInteractAction(pos, false));
+                    return true;
+                }
             }
             else
             {
@@ -3243,8 +3250,7 @@ namespace Neuro_Plateup
                         EntityManager.AddComponentData(bot, new CBotWaiting(wokPos, 150639636));
                         return;
                     }
-                    EntityManager.AddComponentData(bot, new CMoveTo(wokPos));
-                    EntityManager.AddComponentData(bot, new CGrabAction(wokPos, GrabType.Undefined));
+                    HobInteraction(bot, wokPos, GrabType.Undefined);
                 }
                 else if (comp.ID == -486398094)
                 {
@@ -3274,7 +3280,7 @@ namespace Neuro_Plateup
                         RemoveFromOrder(bot, orders[0]);
                     }
                 }
-                else if (comp.ID == -1944015682 || comp.ID == -1774883004 || comp.ID == 313161428 || comp.ID == 1306214641)
+                else if (comp.ID == -1944015682 || comp.ID == -1774883004 || comp.ID == 313161428 || comp.ID == 1306214641 || comp.ID == 2019756794)
                 {
                     if (GetNearestAppliance(pos, Counters, out var CounterPos, out _, true, null, KitchenRoomTypes))
                     {
@@ -3293,8 +3299,8 @@ namespace Neuro_Plateup
                 {
                     if (TryGetItemMemory(bot, -2135410839, out var wokPos))
                     {
-                        EntityManager.AddComponentData(bot, new CMoveTo(wokPos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(wokPos, GrabType.CombineDrop));
+                        if (!HobInteraction(bot, wokPos, GrabType.CombineDrop))
+                            return;
                         ClearItemMemory(bot);
                         AddItemMemory(bot, new ItemInfo(1475451665), wokPos);
                         AddItemMemory(bot, new ItemInfo(150639636), wokPos);
@@ -3323,8 +3329,8 @@ namespace Neuro_Plateup
                         EntityManager.AddComponentData(bot, new CBotWaiting(wokPos, 150639636));
                         return;
                     }
-                    EntityManager.AddComponentData(bot, new CMoveTo(wokPos));
-                    EntityManager.AddComponentData(bot, new CGrabAction(wokPos, GrabType.CombineDrop));
+                    if (!HobInteraction(bot, wokPos, GrabType.CombineDrop))
+                        return;
                     ClearItemMemory(bot);
                     AddItemMemory(bot, new ItemInfo(1475451665), wokPos);
                     AddItemMemory(bot, new ItemInfo(150639636), wokPos);
@@ -3440,6 +3446,12 @@ namespace Neuro_Plateup
                     {
                         if (FindNearestItem(bot, 2019756794, pos, out var potPos, false, null))
                         {
+                            if (CookingAppliances.Contains(GetComponent<CAppliance>(TileManager.GetPrimaryOccupant(potPos)).ID))
+                            {
+                                Debug.Log("Picking up bamboo pot from hob");
+                                HobInteraction(bot, potPos, GrabType.Pickup);
+                                return;
+                            }
                             EntityManager.AddComponentData(bot, new CMoveTo(potPos));
                             EntityManager.AddComponentData(bot, new CInteractAction(potPos, true));
                         }
@@ -3447,11 +3459,16 @@ namespace Neuro_Plateup
                         {
                             if (!CookingAppliances.Contains(GetComponent<CAppliance>(TileManager.GetPrimaryOccupant(bambooPos)).ID))
                             {
-                                Debug.Log("No bamboo pot found");
-                                ClearItemMemory(bot);
-                                return;
+                                EntityManager.AddComponentData(bot, new CMoveTo(bambooPos));
+                                EntityManager.AddComponentData(bot, new CGrabAction(bambooPos, GrabType.Pickup));
                             }
                             EntityManager.AddComponentData(bot, new CBotWaiting(bambooPos, 2019756794));
+                        }
+                        else
+                        {
+                            Debug.Log("No bamboo pot found");
+                            ClearItemMemory(bot);
+                            return;
                         }
                     }
                     else
