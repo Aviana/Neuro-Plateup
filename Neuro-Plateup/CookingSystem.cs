@@ -109,7 +109,7 @@ namespace Neuro_Plateup
             DishWashers = new HashSet<int> { -214126192, -823922901 };
             Sinks = new HashSet<int> { 1083874952, 1467371088, -266993023, 540526865 };
             Bins = new HashSet<int> { 2127051779, -1632826946, -1855909480, 481495292, 1551609169, 620400448, 1159228054, 1492264331 }; // Infinite Bin: 1159228054
-            Counters = new HashSet<int> { -1248669347, -1339944542, -1963699221 };
+            Counters = new HashSet<int> { -1573577293, -1248669347, -1339944542, -1963699221 };
             WaterProviders = new HashSet<int> { 1467371088, 1083874952, -266993023 };
             Plates = new HashSet<int> { 540526865, 380220741, 1313469794 };
             Tables = new HashSet<int> { 209074140, -3721951, -34659638, -203679687, -2019409936 };
@@ -355,7 +355,7 @@ namespace Neuro_Plateup
             return false;
         }
 
-        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool? hasNoHeld = null, FillStateCheck? fillState = null, HashSet<RoomType> validRoomTypes = null)
+        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool? hasNoHeld = null, FillStateCheck? fillState = null, HashSet<RoomType> validRoomTypes = null, bool noHatches = false)
         {
             fillState ??= FillStateCheck.Ignore;
             validRoomTypes ??= AllRoomTypes;
@@ -368,10 +368,18 @@ namespace Neuro_Plateup
             foreach (var appliance in Appliances)
             {
                 var ID = GetComponent<CAppliance>(appliance).ID;
+                var pos = GetComponent<CPosition>(appliance).Position;
+
                 if (hasNoHeld == GetComponentOfHeld<CItem>(appliance, out _))
                 {
                     continue;
                 }
+
+                if (noHatches && MoveToSystem.Hatches.Contains(pos))
+                {
+                    continue;
+                }
+
                 if (fillState != FillStateCheck.Ignore && ApplianceCapacity(appliance, out var current, out var maximum))
                 {
                     switch (fillState)
@@ -399,7 +407,6 @@ namespace Neuro_Plateup
 
                 if (validAppliances.Contains(ID))
                 {
-                    var pos = GetComponent<CPosition>(appliance).Position;
 
                     if (!validRoomTypes.Contains(TileManager.GetTile(pos).Type) && !MoveToSystem.Hatches.Contains(pos))
                     {
@@ -1996,7 +2003,12 @@ namespace Neuro_Plateup
                 else if (comp.ID == 1291848678)
                 {
                     // Mandarin Raw
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes))
+                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes, true))
+                    {
+                        EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
+                        EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
+                    }
+                    else if (GetNearestAppliance(pos, Counters, out counterPos, out _, true, null, KitchenRoomTypes))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -2031,10 +2043,11 @@ namespace Neuro_Plateup
             {
                 if (FindNearestItem(bot, new ItemInfo(1291848678), pos, out var fruitPos, false, KitchenRoomTypes))
                 {
-                    if (FindNearestItem(bot, new HashSet<ItemInfo> { new ItemInfo(448483396), new ItemInfo(-263257027), new ItemInfo(226055037) }, pos, out var mandarinPos, true, KitchenRoomTypes))
+                    if (TryGetItemMemory(bot, new HashSet<int> { 448483396, -263257027, 226055037 }, out var mandarinPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(mandarinPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(mandarinPos, GrabType.Pickup));
+                        ClearItemMemory(bot);
                         return;
                     }
                     EntityManager.AddComponentData(bot, new CMoveTo(fruitPos));
