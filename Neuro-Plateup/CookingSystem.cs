@@ -355,7 +355,7 @@ namespace Neuro_Plateup
             return false;
         }
 
-        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool? hasNoHeld = null, FillStateCheck? fillState = null, HashSet<RoomType> validRoomTypes = null, bool noHatches = false)
+        public bool GetNearestAppliance(Vector3 sourceTile, HashSet<int> validAppliances, out Vector3 targetPos, out int targetID, bool? hasNoHeld = null, FillStateCheck? fillState = null, HashSet<RoomType> validRoomTypes = null)
         {
             fillState ??= FillStateCheck.Ignore;
             validRoomTypes ??= AllRoomTypes;
@@ -371,11 +371,6 @@ namespace Neuro_Plateup
                 var pos = GetComponent<CPosition>(appliance).Position;
 
                 if (hasNoHeld == GetComponentOfHeld<CItem>(appliance, out _))
-                {
-                    continue;
-                }
-
-                if (noHatches && MoveToSystem.Hatches.Contains(pos))
                 {
                     continue;
                 }
@@ -434,6 +429,29 @@ namespace Neuro_Plateup
             }
             Appliances.Dispose();
             return flag;
+        }
+
+        public bool GetBestHob(Vector3 start, out Vector3 hobPos, out bool isDanger, bool isLongCook = false)
+        {
+            isDanger = false;
+            if (isLongCook && GetNearestAppliance(start, new HashSet<int> { -1311702572 }, out hobPos, out _, true, null, KitchenRoomTypes))
+            {
+                return true;
+            }
+            else if (GetNearestAppliance(start, new HashSet<int> { -1448690107, -1068749602 }, out hobPos, out _, true, null, KitchenRoomTypes))
+            {
+                isDanger = true;
+                return true;
+            }
+            else if (GetNearestAppliance(start, new HashSet<int> { 862493270 }, out hobPos, out _, true, null, KitchenRoomTypes))
+            {
+                return true;
+            }
+            else if (GetNearestAppliance(start, CookingAppliances, out hobPos, out var ID, true, null, KitchenRoomTypes))
+            {
+                return true;
+            }
+            return false;
         }
 
         public bool GetNearestDishWasher(Vector3 start, bool isFull, bool isClean, out Vector3 targetPos)
@@ -1121,7 +1139,7 @@ namespace Neuro_Plateup
                 }
                 else if (comp.ID == 226578993)
                 {
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
+                    if (GetBestStorage(pos, out var counterPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -1259,7 +1277,7 @@ namespace Neuro_Plateup
                 }
                 else if (comp.ID == -1582466042)
                 {
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
+                    if (GetBestStorage(pos, out var counterPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -1391,7 +1409,7 @@ namespace Neuro_Plateup
                 }
                 else if (comp.ID == -1284423669)
                 {
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
+                    if (GetBestStorage(pos, out var counterPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -1523,7 +1541,7 @@ namespace Neuro_Plateup
                 }
                 else if (comp.ID == 407468560 || comp.ID == -165143951)
                 {
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
+                    if (GetBestStorage(pos, out var counterPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -1692,7 +1710,7 @@ namespace Neuro_Plateup
                 }
                 else if (comp.ID == 1752228187 || comp.ID == 1242961771)
                 {
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true))
+                    if (GetBestStorage(pos, out var counterPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -1876,7 +1894,7 @@ namespace Neuro_Plateup
                 }
                 else if (comp.ID == -1867438686)
                 {
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes))
+                    if (GetBestStorage(pos, out var counterPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -2003,12 +2021,7 @@ namespace Neuro_Plateup
                 else if (comp.ID == 1291848678)
                 {
                     // Mandarin Raw
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes, true))
-                    {
-                        EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
-                    }
-                    else if (GetNearestAppliance(pos, Counters, out counterPos, out _, true, null, KitchenRoomTypes))
+                    if (GetBestStorage(pos, out var counterPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -2548,7 +2561,7 @@ namespace Neuro_Plateup
                 }
                 else if (comp.ID == -1965870011)
                 {
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes))
+                    if (GetBestStorage(pos, out var counterPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -2903,7 +2916,7 @@ namespace Neuro_Plateup
                 }
                 else if (comp == new ItemInfo(-1196800934, baked)) // baked pizza
                 {
-                    if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes))
+                    if (GetBestStorage(pos, out var counterPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                         EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
@@ -3641,7 +3654,7 @@ namespace Neuro_Plateup
                         }
                     case -1945246136: // Nut Mixture - Baked
                         {
-                            if (GetNearestAppliance(pos, Counters, out var counterPos, out _, true, null, KitchenRoomTypes))
+                            if (GetBestStorage(pos, out var counterPos))
                             {
                                 EntityManager.AddComponentData(bot, new CMoveTo(counterPos));
                                 EntityManager.AddComponentData(bot, new CGrabAction(counterPos, GrabType.Drop));
