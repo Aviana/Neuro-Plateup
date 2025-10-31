@@ -8,26 +8,31 @@ namespace Neuro_Plateup
     {
         public static readonly Dictionary<string, ItemInfo> Data = new Dictionary<string, ItemInfo>
         {
-            { "Broccoli Cheese Soup", new ItemInfo(1384211889, new FixedListInt64 { 1384211889 }) },
-            {"Carrot Soup", new ItemInfo(409276704, new FixedListInt64 { 409276704 }) },
-            { "Meat Soup", new ItemInfo(1684936685, new FixedListInt64 { 1684936685 }) },
-            { "Pumpkin Soup", new ItemInfo(790436685, new FixedListInt64 { 790436685 }) },
-            { "Tomato Soup", new ItemInfo(894680043, new FixedListInt64 { 894680043 }) },
+            { "Broccoli Cheese Soup", new ItemInfo(1384211889) },
+            { "Pot of Broccoli Cheese Soup", new ItemInfo(226578993) },
+            { "Carrot Soup", new ItemInfo(409276704) },
+            { "Pot of Carrot Soup", new ItemInfo(-1582466042) },
+            { "Meat Soup", new ItemInfo(1684936685) },
+            { "Pot of Meat Soup", new ItemInfo(-1284423669) },
+            { "Pumpkin Soup", new ItemInfo(790436685) },
+            { "Pot of Pumpkin Soup", new ItemInfo(407468560) },
+            { "Tomato Soup", new ItemInfo(894680043) },
+            { "Pot of Tomato Soup", new ItemInfo(1752228187) },
             { "Bread", new ItemInfo(1503471951, new FixedListInt64 { -626784042, -306959510, -306959510 }) },
-            { "Christmas Crackers", new ItemInfo(749675166, new FixedListInt64 { 749675166 }) },
+            { "Christmas Crackers", new ItemInfo(749675166) },
             { "2 Mandarin Slices", new ItemInfo(-263257027, new FixedListInt64 { 448483396, 448483396 }) },
             { "4 Mandarin Slices", new ItemInfo(226055037, new FixedListInt64 { 448483396, 448483396, 448483396, 448483396 }) },
-            { "Pumpkin Seeds", new ItemInfo(1018675021, new FixedListInt64 { 1018675021 }) },
-            { "Bamboo", new ItemInfo(2037858460, new FixedListInt64 { 2037858460 }) },
-            { "Broccoli", new ItemInfo(-1520921913, new FixedListInt64 { -1520921913 }) },
-            { "Chips", new ItemInfo(-259844528, new FixedListInt64 { -259844528 }) },
-            { "Corn on the Cob", new ItemInfo(-1640761177, new FixedListInt64 { -1640761177 }) },
-            { "Mashed Potato", new ItemInfo(107345299, new FixedListInt64 { 107345299 }) },
-            { "Onion Rings", new ItemInfo(-1086687302, new FixedListInt64 { -1086687302 }) },
-            { "Roast Potato", new ItemInfo(-939434748, new FixedListInt64 { -939434748 }) },
-            { "Apple Pies", new ItemInfo(82666420, new FixedListInt64 { 82666420 }) },
-            { "Cherry Pie", new ItemInfo(1842093636, new FixedListInt64 { 1842093636 }) },
-            { "Pumpkin Pies", new ItemInfo(-126602470, new FixedListInt64 { -126602470 }) },
+            { "Pumpkin Seeds", new ItemInfo(1018675021) },
+            { "Bamboo", new ItemInfo(2037858460) },
+            { "Broccoli", new ItemInfo(-1520921913) },
+            { "Chips", new ItemInfo(-259844528) },
+            { "Corn on the Cob", new ItemInfo(-1640761177) },
+            { "Mashed Potato", new ItemInfo(107345299) },
+            { "Onion Rings", new ItemInfo(-1086687302) },
+            { "Roast Potato", new ItemInfo(-939434748) },
+            { "Apple Pies", new ItemInfo(82666420) },
+            { "Cherry Pie", new ItemInfo(1842093636) },
+            { "Pumpkin Pies", new ItemInfo(-126602470) },
             { "Cheese Board", new ItemInfo(1639948793, new FixedListInt64 { -626784042, 252763172, -755280170, 609827370 }) },
 
             { "Ice Cream with 3x Vanilla", new ItemInfo(-1307479546, new FixedListInt64 { 1570518340, 1570518340, 1570518340 }) },
@@ -272,7 +277,7 @@ namespace Neuro_Plateup
             { "Dumplings", new ItemInfo(-1938035042, new FixedListInt64 { 793377380, 1640282430 }) },
             { "Dumplings with Seaweed", new ItemInfo(-1938035042, new FixedListInt64 { 793377380, 1640282430, -1847818036 }) },
 
-            { "Black Coffee", new ItemInfo(-1293050650, new FixedListInt64 { -1293050650 }) },
+            { "Black Coffee", new ItemInfo(-1293050650) },
 
             { "Iced Coffee", new ItemInfo(-1388933833, new FixedListInt64 { -1293050650, -442824475 }) },
 
@@ -283,7 +288,7 @@ namespace Neuro_Plateup
 
             { "Affogato", new ItemInfo(-249136431, new FixedListInt64 { -1293050650, 1570518340 }) },
 
-            { "Cake Stand", new ItemInfo(41735497, new FixedListInt64 { 41735497 }) },
+            { "Cake Stand", new ItemInfo(41735497) },
 
             { "Burgers", new ItemInfo(-884392267, new FixedListInt64 { 793377380, -1756808590, 687585830 }) },
 
@@ -314,9 +319,9 @@ namespace Neuro_Plateup
 
             { "Vegetable Pie", new ItemInfo(861630222, new FixedListInt64 { 793377380, -1612932608 }) },
 
-            { "Chocolate Cake", new ItemInfo(-1303191076, new FixedListInt64 { -1303191076 }) },
-            { "Lemon Cake", new ItemInfo(51761947, new FixedListInt64 { 51761947 }) },
-            { "Coffee Cake", new ItemInfo(-19982058, new FixedListInt64 { -19982058 }) },
+            { "Chocolate Cake", new ItemInfo(-1303191076) },
+            { "Lemon Cake", new ItemInfo(51761947) },
+            { "Coffee Cake", new ItemInfo(-19982058) },
 
             { "Spaghetti", new ItemInfo(1900532137, new FixedListInt64 { 793377380, -1640088321, -1317168923 }) },
 
@@ -362,27 +367,27 @@ namespace Neuro_Plateup
             { "Tacos with Lettuce, Tomato, Onion and Cheese", new ItemInfo(244927287, new FixedListInt64 { 111245472, 177461183, -1397390776, -853757044, -1252408744, 263830100 }) },
 
             { "Hot Dog", new ItemInfo(1702578261, new FixedListInt64 { 793377380, 756326364, -248200024 }) },
-            { "Ketchup", new ItemInfo(-1075930689, new FixedListInt64 { -1075930689 }) },
-            { "Mustard", new ItemInfo(-1114203942, new FixedListInt64 { -1114203942 }) },
+            { "Ketchup", new ItemInfo(-1075930689) },
+            { "Mustard", new ItemInfo(-1114203942) },
 
-            { "Toast", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718 }) },
+            { "Breakfast: Toast", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718 }) },
 
-            { "Beans on Toast", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, -2138118944 }) },
-            { "Egg on Toast", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, 1324261001 }) },
-            { "Toast with Tomato", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, -853757044 }) },
-            { "Toast with Mushroom", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, -2093899333 }) },
+            { "Breakfast: Beans on Toast", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, -2138118944 }) },
+            { "Breakfast: Egg on Toast", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, 1324261001 }) },
+            { "Breakfast: Toast with Tomato", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, -853757044 }) },
+            { "Breakfast: Toast with Mushroom", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, -2093899333 }) },
 
-            { "Egg on Toast with Beans", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, 1324261001, -2138118944 }) },
-            { "Egg on Toast with Tomato", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, 1324261001, -853757044 }) },
-            { "Egg on Toast with Mushroom", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, 1324261001, -2093899333 }) },
-            { "Beans on Toast with Tomato", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, -2138118944, -853757044 }) },
-            { "Beans on Toast with Mushroom", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, -2138118944, -2093899333 }) },
-            { "Toast with Tomato and Mushroom", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, -853757044, -2093899333 }) },
+            { "Breakfast: Egg on Toast with Beans", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, 1324261001, -2138118944 }) },
+            { "Breakfast: Egg on Toast with Tomato", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, 1324261001, -853757044 }) },
+            { "Breakfast: Egg on Toast with Mushroom", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, 1324261001, -2093899333 }) },
+            { "Breakfast: Beans on Toast with Tomato", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, -2138118944, -853757044 }) },
+            { "Breakfast: Beans on Toast with Mushroom", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, -2138118944, -2093899333 }) },
+            { "Breakfast: Toast with Tomato and Mushroom", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, -853757044, -2093899333 }) },
 
-            { "Egg on Toast with Beans and Tomato", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, 1324261001, -2138118944, -853757044 }) },
-            { "Egg on Toast with Beans and Mushroom", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, 1324261001, -2138118944, -2093899333 }) },
-            { "Beans on Toast with Tomato and Mushroom", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, -2138118944, -853757044, -2093899333 }) },
-            { "Egg on Toast with Tomato and Mushroom", new ItemInfo(1384211889, new FixedListInt64 { 793377380, 428559718, 1324261001, -853757044, -2093899333 }) },
+            { "Breakfast: Egg on Toast with Beans and Tomato", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, 1324261001, -2138118944, -853757044 }) },
+            { "Breakfast: Egg on Toast with Beans and Mushroom", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, 1324261001, -2138118944, -2093899333 }) },
+            { "Breakfast: Beans on Toast with Tomato and Mushroom", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, -2138118944, -853757044, -2093899333 }) },
+            { "Breakfast: Egg on Toast with Tomato and Mushroom", new ItemInfo(1754241573, new FixedListInt64 { 793377380, 428559718, 1324261001, -853757044, -2093899333 }) },
 
             { "Stir Fry with Carrot", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1406021079 }) },
             { "Stir Fry with Meat", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, -1018018897 }) },
@@ -404,7 +409,7 @@ namespace Neuro_Plateup
 
             { "Stir Fry with Bamboo and Mushroom", new ItemInfo(-361808208, new FixedListInt64 { 793377380, 1928939081, 880804869, -336580972 }) },
 
-            { "Soy Sauce", new ItemInfo(1190974918, new FixedListInt64 { 1190974918 }) },
+            { "Soy Sauce", new ItemInfo(1190974918) },
         };
 
         public static bool TryGetValues(string name, out int id, out FixedListInt64 items)
