@@ -19,6 +19,7 @@ namespace Neuro_Plateup
             { "Tomato Soup", new ItemInfo(894680043) },
             { "Pot of Tomato Soup", new ItemInfo(1752228187) },
             { "Bread", new ItemInfo(1503471951, new FixedListInt64 { -626784042, -306959510, -306959510 }) },
+            { "Loaf", new ItemInfo(-1867438686) },
             { "Christmas Crackers", new ItemInfo(749675166) },
             { "2 Mandarin Slices", new ItemInfo(-263257027, new FixedListInt64 { 448483396, 448483396 }) },
             { "4 Mandarin Slices", new ItemInfo(226055037, new FixedListInt64 { 448483396, 448483396, 448483396, 448483396 }) },
