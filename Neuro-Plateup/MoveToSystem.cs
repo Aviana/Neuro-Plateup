@@ -118,6 +118,8 @@ namespace Neuro_Plateup
                     {
                         if (IsBlocked(feature.Tile1) ^ IsBlocked(feature.Tile2))
                         {
+                            // NYI: Filter hatches that lead to rooms without tables
+                            // NYI: Filter hatches that are blocked by tables
                             if (TileManager.GetTile(feature.Tile1).Type == RoomType.Kitchen || TileManager.GetTile(feature.Tile2).Type == RoomType.Kitchen)
                                 Hatches.Add(feature.Tile1, feature.Tile2);
                         }

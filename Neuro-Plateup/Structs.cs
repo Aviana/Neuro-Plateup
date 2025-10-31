@@ -187,6 +187,24 @@ namespace Neuro_Plateup
                 Items.Add(item);
         }
 
+        public ItemInfo(CItem item, int component)
+        {
+            ID = item.ID;
+            Extra = 0;
+            foreach (var side in OrderNameRepository.Sides)
+            {
+                if (item.Items.Contains(side))
+                    Extra = side;
+            }
+            Items = new FixedListInt64();
+            foreach (var i in item.Items)
+            {
+                if (i != Extra)
+                    Items.Add(i);
+            }
+            Items.Add(component);
+        }
+
         public static bool operator ==(ItemInfo a, CItem b)
         {
             if (a.ID != b.ID)
