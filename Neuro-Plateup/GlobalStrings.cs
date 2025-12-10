@@ -86,6 +86,11 @@ namespace Neuro_Plateup
                 {
                     DESC = "Return dirty plates to the kitchen."
                 }
+            },
+            { "drop_item", new ActionStrings
+                {
+                    DESC = "Get rid of the currently held item."
+                }
             }
         };
 

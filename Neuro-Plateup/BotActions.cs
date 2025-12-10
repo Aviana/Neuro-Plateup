@@ -135,7 +135,13 @@ namespace Neuro_Plateup
                 Roles = BotRole.Waiter,
                 IsAvailable = (system, bot) => system.HasDirtyPlates(bot)
             },
-
+            new BotAction
+            {
+                Name = "drop_item",
+                RequiredState = GameState.Any,
+                Roles = BotRole.Any,
+                IsAvailable = (system, bot) => system.HasHeld(bot)
+            },
             // NYI: Check for Supplies, if present restock any empty dispensers
 
             // NYI: If we have dispensers and there are unstocked tables resupply them

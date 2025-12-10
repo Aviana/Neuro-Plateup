@@ -60,8 +60,9 @@ Every time you encounter a check for consent from all players the bots will auto
 
 Due to the complexity this game offers i have chosen to cut certain aspects of the game out of my implementation.
 Those are:
+- Bot only mode. Due to the limitations explained below the bots can only be considered as companions along human players.
 - Automation features: Making the bots understand whatever automated systems were set up during prep phase is too much of a task. However all existing ingredients / food at prep time will be utilized by them.
-- Prep / build phase: The bots are meant as companions and are incapable of designing any kind of (especially not an efficient) kitchen.
+- Prep / build phase: Bots are incapable of designing any kind of (especially not an efficient) kitchen.
 
 ## Credits
 

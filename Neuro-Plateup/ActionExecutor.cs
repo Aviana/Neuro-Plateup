@@ -65,7 +65,8 @@ namespace Neuro_Plateup
                 { "prepare_dishes", Prepare },
                 { "empty_bin", ClearBin },
                 { "wash_plates", WashPlates },
-                { "return_plates", ReturnPlates }
+                { "return_plates", ReturnPlates },
+                { "drop_item", DropItem }
             };
 
             StartingPosition = new Vector3 { x = -8, y = 0, z = -8 };
@@ -867,6 +868,16 @@ namespace Neuro_Plateup
             input.Send(evt);
             evt.State.MenuRight = ButtonState.Released;
             input.Send(evt);
+            EntityManager.RemoveComponent<CBotAction>(bot);
+        }
+
+        private void DropItem(Entity bot, string payload)
+        {
+            if (GetComponentOfHeld<CItem>(bot, out _))
+            {
+                EmptyHands(bot);
+                return;
+            }
             EntityManager.RemoveComponent<CBotAction>(bot);
         }
     }

@@ -826,5 +826,10 @@ namespace Neuro_Plateup
             Tables.Dispose();
             return false;
         }
+
+        public bool HasHeld(Entity bot)
+        {
+            return GetComponentOfHeld<CItem>(bot, out _);
+        }
     }
 }
