@@ -12,7 +12,7 @@ namespace Neuro_Plateup
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class MoveToSystem : GenericSystemBase, IModSystem
     {
-        private EntityQuery BotQuery, InputCapturesQuery, LayoutQuery, LayoutResetQuery;
+        private EntityQuery BotQuery, InputCapturesQuery, LayoutQuery, LayoutResetQuery, TableQuery;
         private FakeInput input;
         public static TilePairContainer Doors, Hatches;
         public static HashSet<int> Whitelist;
@@ -72,6 +72,11 @@ namespace Neuro_Plateup
                         typeof(SIsDayFirstUpdate),
                         typeof(SIsNightFirstUpdate)
                     ));
+            TableQuery = GetEntityQuery(
+                new QueryHelper()
+                    .All(
+                        typeof(CApplianceTable)
+                    ));
             Doors = new TilePairContainer();
             Hatches = new TilePairContainer();
             input = new FakeInput();
@@ -84,6 +89,11 @@ namespace Neuro_Plateup
                     FranchiseTable.Add(new Vector3(x, 0, z));
                 }
             }
+            // Those fucking mirrors
+            FranchiseTable.Add(new Vector3(8, 0, 7));
+            FranchiseTable.Add(new Vector3(8, 0, 4));
+            FranchiseTable.Add(new Vector3(8, 0, 1));
+            FranchiseTable.Add(new Vector3(8, 0, -2));
 
             Whitelist = new HashSet<int>
             {
@@ -108,20 +118,33 @@ namespace Neuro_Plateup
                 Doors.Clear();
                 Hatches.Clear();
             }
-            if (!LayoutQuery.IsEmptyIgnoreFilter && Doors.Count == 0)
+            if (!LayoutQuery.IsEmptyIgnoreFilter && Hatches.Count == 0)
             {
                 // NYI: Illusion Wall
+                var RoomsWithTables = new HashSet<int> {};
+                var Tables = TableQuery.ToEntityArray(Allocator.Temp);
+                foreach (var table in Tables)
+                {
+                    var tile = TileManager.GetTile(GetComponent<CPosition>(table));
+                    RoomsWithTables.Add(tile.RoomID);
+                }
+
                 var layout = LayoutQuery.GetSingletonEntity();
                 foreach (CLayoutFeature feature in EntityManager.GetBuffer<CLayoutFeature>(layout))
                 {
+                    var Tile1 = TileManager.GetTile(feature.Tile1);
+                    var Tile2 = TileManager.GetTile(feature.Tile2);
+
                     if (feature.Type.IsDoor())
                     {
-                        if (IsBlocked(feature.Tile1) ^ IsBlocked(feature.Tile2))
+                        if (
+                            IsBlocked(feature.Tile1) ^ IsBlocked(feature.Tile2) &&
+                            IsHolder(feature.Tile1) ^ IsHolder(feature.Tile2) &&
+                            (RoomsWithTables.Contains(Tile1.RoomID) || RoomsWithTables.Contains(Tile2.RoomID)) &&
+                            Tile1.Type != RoomType.Kitchen && Tile2.Type != RoomType.Kitchen
+                        )
                         {
-                            // NYI: Filter hatches that lead to rooms without tables
-                            // NYI: Filter hatches that are blocked by tables
-                            if (TileManager.GetTile(feature.Tile1).Type == RoomType.Kitchen || TileManager.GetTile(feature.Tile2).Type == RoomType.Kitchen)
-                                Hatches.Add(feature.Tile1, feature.Tile2);
+                            Hatches.Add(feature.Tile1, feature.Tile2);
                         }
                         else
                         {
@@ -130,38 +153,37 @@ namespace Neuro_Plateup
                     }
                     else if (feature.Type == FeatureType.Hatch)
                     {
-                        if (!IsBlocked(feature.Tile1) || !IsBlocked(feature.Tile2))
+                        if (
+                            IsBlocked(feature.Tile1) ^ IsBlocked(feature.Tile2) &&
+                            IsHolder(feature.Tile1) ^ IsHolder(feature.Tile2) &&
+                            (RoomsWithTables.Contains(Tile1.RoomID) || RoomsWithTables.Contains(Tile2.RoomID)) &&
+                            Tile1.Type != RoomType.Kitchen && Tile2.Type != RoomType.Kitchen
+                        )
                             Hatches.Add(feature.Tile1, feature.Tile2);
                     }
-                }
 
-                var additionalHatches = new List<HashSet<Vector3>>();
-                foreach (var hatch in Hatches)
-                {
-                    var Tile1 = TileManager.GetTile(hatch[0]);
-                    var Tile2 = TileManager.GetTile(hatch[1]);
-                    foreach (var target in GetSides(hatch[0], hatch[1]))
+                    if (Tile1.Type != RoomType.Kitchen && Tile2.Type != RoomType.Kitchen)
+                        continue;
+
+                    foreach (var target in GetSides(feature.Tile1, feature.Tile2))
                     {
                         var TileTarget = TileManager.GetTile(target);
                         if (Tile1.RoomID != TileTarget.RoomID)
                         {
-                            if (!IsBlocked(Tile1.Position) || !IsBlocked(TileTarget.Position))
-                                additionalHatches.Add(new HashSet<Vector3> { target, hatch[0] });
+                            if (IsBlocked(Tile1.Position) ^ IsBlocked(TileTarget.Position) && IsHolder(Tile1.Position) ^ IsHolder(TileTarget.Position) && (RoomsWithTables.Contains(Tile1.RoomID) || RoomsWithTables.Contains(TileTarget.RoomID)))
+                                Hatches.Add(new HashSet<Vector3> { target, feature.Tile1 });
                         }
                     }
-                    foreach (var target in GetSides(hatch[1], hatch[0]))
+
+                    foreach (var target in GetSides(feature.Tile2, feature.Tile1))
                     {
                         var TileTarget = TileManager.GetTile(target);
                         if (Tile2.RoomID != TileTarget.RoomID)
                         {
-                            if (!IsBlocked(Tile2.Position) || !IsBlocked(TileTarget.Position))
-                                additionalHatches.Add(new HashSet<Vector3> { target, hatch[1] });
+                            if (IsBlocked(Tile2.Position) ^ IsBlocked(TileTarget.Position) && IsHolder(Tile2.Position) ^ IsHolder(TileTarget.Position) && (RoomsWithTables.Contains(Tile2.RoomID) || RoomsWithTables.Contains(TileTarget.RoomID)))
+                                Hatches.Add(new HashSet<Vector3> { target, feature.Tile2 });
                         }
                     }
-                }
-                foreach (var h in additionalHatches)
-                {
-                    Hatches.Add(h);
                 }
             }
 
@@ -191,6 +213,7 @@ namespace Neuro_Plateup
 
         public bool GetWaypoint(Vector3 playerPos, Vector3 destination, out Vector3 wp, out int steps)
         {
+            // NYI: Start from a "blocked" square
             steps = 0;
             wp = playerPos;
             if (playerPos == destination)
@@ -324,6 +347,22 @@ namespace Neuro_Plateup
                 return true;
             }
             return false;
+        }
+
+        public bool IsHolder(Vector3 vec)
+        {
+            var ent = TileManager.GetPrimaryOccupant(vec);
+
+            if (ent == default(Entity))
+                return false;
+
+            if (HasComponent<CApplianceTable>(ent))
+                return false;
+
+            if (!HasComponent<CItemHolder>(ent))
+                return false;
+
+            return true;
         }
 
         private List<Vector3> GetSides(Vector3 from, Vector3 to)
