@@ -91,7 +91,7 @@ namespace Neuro_Plateup
                 if (PlayerData.ContainsKey(entry.Key))
                 {
                     var pInfo = PlayerData[entry.Key];
-                    pInfo.Username = "Bot";
+                    pInfo.Username = "AI";
                     PlayerData[entry.Key] = pInfo;
                 }
 
