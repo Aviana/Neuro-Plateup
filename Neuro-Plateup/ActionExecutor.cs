@@ -348,7 +348,7 @@ namespace Neuro_Plateup
                 EntityManager.AddComponent<CBotActionRunning>(bot);
 
                 EntityManager.AddComponentData(bot, new CMoveTo(target));
-                EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Drop));
+                EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Drop, new ItemInfo(holding)));
             }
             else
             {
@@ -410,7 +410,7 @@ namespace Neuro_Plateup
                 {
                     // There is something on our serve target
                     EntityManager.AddComponentData(bot, new CMoveTo(foodPos));
-                    EntityManager.AddComponentData(bot, new CGrabAction(foodPos, GrabType.Pickup));
+                    EntityManager.AddComponentData(bot, new CGrabAction(foodPos, GrabType.Pickup, default, targetInfo));
                     return;
                 }
 
@@ -424,11 +424,11 @@ namespace Neuro_Plateup
                             Debug.LogError("Could not find " + targetInfo.ID);
                         }
                     }
-                    EntityManager.AddComponentData(bot, new CGrabAction(foodPos, GrabType.Undefined));
+                    EntityManager.AddComponentData(bot, new CGrabAction(foodPos, GrabType.Dispense));
                 }
                 else
                 {
-                    EntityManager.AddComponentData(bot, new CGrabAction(foodPos, GrabType.Pickup));
+                    EntityManager.AddComponentData(bot, new CGrabAction(foodPos, GrabType.Pickup, default, targetInfo));
                 }
                 EntityManager.AddComponentData(bot, new CMoveTo(foodPos));
             }
@@ -605,7 +605,7 @@ namespace Neuro_Plateup
                     }
 
                     EntityManager.AddComponentData(bot, new CMoveTo(outsideBin.Position));
-                    EntityManager.AddComponentData(bot, new CGrabAction(outsideBin.Position, GrabType.Fill));
+                    EntityManager.AddComponentData(bot, new CGrabAction(outsideBin.Position, GrabType.Fill, new ItemInfo(comp)));
                     EntityManager.RemoveComponent<CBotAction>(bot);
                     return;
                 }
@@ -655,7 +655,7 @@ namespace Neuro_Plateup
                     if (cookingSystem.GetNearestAppliance(pos, CookingSystem.Plates, out var platePos, out var ID, null, CookingSystem.FillStateCheck.IsNotFull))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(platePos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(platePos, GrabType.Fill));
+                        EntityManager.AddComponentData(bot, new CGrabAction(platePos, GrabType.Fill, new ItemInfo(comp)));
                     }
                     else
                     {
@@ -667,7 +667,7 @@ namespace Neuro_Plateup
                     if (cookingSystem.GetNearestAppliance(pos, new HashSet<int> { 235423916 }, out var boardPos, out _, null, CookingSystem.FillStateCheck.IsNotFull))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(boardPos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(boardPos, GrabType.Fill));
+                        EntityManager.AddComponentData(bot, new CGrabAction(boardPos, GrabType.Fill, new ItemInfo(comp)));
                     }
                     else
                     {
@@ -682,12 +682,12 @@ namespace Neuro_Plateup
                         // NYI: needs testing
                         Debug.Log("Found a dish washer");
                         EntityManager.AddComponentData(bot, new CMoveTo(washerPos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(washerPos, GrabType.Fill));
+                        EntityManager.AddComponentData(bot, new CGrabAction(washerPos, GrabType.Fill, new ItemInfo(comp)));
                     }
                     else if (cookingSystem.GetNearestAppliance(pos, CookingSystem.Sinks, out var sinkPos, out var ID, true))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(sinkPos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(sinkPos, GrabType.Drop));
+                        EntityManager.AddComponentData(bot, new CGrabAction(sinkPos, GrabType.Drop, new ItemInfo(comp)));
                     }
                     else
                     {
@@ -703,7 +703,7 @@ namespace Neuro_Plateup
                         binPos = GetComponent<CPosition>(GetEntity<CApplianceExternalBin>());
                     }
                     EntityManager.AddComponentData(bot, new CMoveTo(binPos));
-                    EntityManager.AddComponentData(bot, new CGrabAction(binPos, GrabType.Undefined));
+                    EntityManager.AddComponentData(bot, new CGrabAction(binPos, GrabType.Fill, new ItemInfo(comp)));
                 }
                 else if (comp.ID == -1527669626)
                 {
@@ -713,7 +713,7 @@ namespace Neuro_Plateup
                         binPos = GetComponent<CPosition>(GetEntity<CApplianceExternalBin>());
                     }
                     EntityManager.AddComponentData(bot, new CMoveTo(binPos));
-                    EntityManager.AddComponentData(bot, new CGrabAction(binPos, GrabType.Fill));
+                    EntityManager.AddComponentData(bot, new CGrabAction(binPos, GrabType.Fill, new ItemInfo(comp)));
                 }
                 else
                 {
@@ -731,7 +731,7 @@ namespace Neuro_Plateup
             else if (cookingSystem.FindNearestItem(bot, new ItemInfo(793377380), pos, out var sinkPos, false, CookingSystem.Sinks))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(sinkPos));
-                EntityManager.AddComponentData(bot, new CGrabAction(sinkPos, GrabType.Pickup));
+                EntityManager.AddComponentData(bot, new CGrabAction(sinkPos, GrabType.Pickup, default, new ItemInfo(793377380)));
             }
             else if (cookingSystem.FindNearestItem(bot, new ItemInfo(1517992271), pos, out var sinkPos2, false, CookingSystem.Sinks))
             {
@@ -743,10 +743,10 @@ namespace Neuro_Plateup
                 EntityManager.AddComponentData(bot, new CMoveTo(bonePlatePos));
                 EntityManager.AddComponentData(bot, new CInteractAction(bonePlatePos, true));
             }
-            else if (cookingSystem.FindNearestItem(bot, new HashSet<ItemInfo> { new ItemInfo(1517992271), new ItemInfo(-1527669626), new ItemInfo(-626784042) }, pos, out var dirtyPlatePos, false, CookingSystem.KitchenRoomTypes))
+            else if (cookingSystem.FindNearestItem(bot, new HashSet<ItemInfo> { new ItemInfo(1517992271), new ItemInfo(-1527669626), new ItemInfo(-626784042) }, pos, out var dirtyPlatePos, out var item, false, CookingSystem.KitchenRoomTypes))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(dirtyPlatePos));
-                EntityManager.AddComponentData(bot, new CGrabAction(dirtyPlatePos, GrabType.Pickup));
+                EntityManager.AddComponentData(bot, new CGrabAction(dirtyPlatePos, GrabType.Pickup, default, item));
             }
             else
             {
@@ -767,7 +767,7 @@ namespace Neuro_Plateup
                     if (cookingSystem.GetBestDropOff(pos, out var hatchPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(hatchPos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(hatchPos, GrabType.Drop));
+                        EntityManager.AddComponentData(bot, new CGrabAction(hatchPos, GrabType.Drop, new ItemInfo(comp)));
                         return;
                     }
                     else
@@ -783,14 +783,14 @@ namespace Neuro_Plateup
                 else if (CookingSystem.ServeProviders.ContainsKey(comp.ID))
                 {
                     EntityManager.AddComponentData(bot, new CMoveTo(CookingSystem.ServeProviders[comp.ID]));
-                    EntityManager.AddComponentData(bot, new CGrabAction(CookingSystem.ServeProviders[comp.ID], GrabType.Undefined));
+                    EntityManager.AddComponentData(bot, new CGrabAction(CookingSystem.ServeProviders[comp.ID], GrabType.Dispense));
                 }
                 else if (CookingSystem.Condiments.Contains(comp.ID))
                 {
                     if (cookingSystem.GetBestDropOff(pos, out var hatchPos))
                     {
                         EntityManager.AddComponentData(bot, new CMoveTo(hatchPos));
-                        EntityManager.AddComponentData(bot, new CGrabAction(hatchPos, GrabType.Drop));
+                        EntityManager.AddComponentData(bot, new CGrabAction(hatchPos, GrabType.Drop, new ItemInfo(comp)));
                         return;
                     }
                     else
@@ -810,10 +810,10 @@ namespace Neuro_Plateup
                     return;
                 }
             }
-            else if (cookingSystem.GetNextDirtyTablePosition(bot, out var target))
+            else if (cookingSystem.GetNextDirtyTablePosition(bot, out var target, out var plate))
             {
                 EntityManager.AddComponentData(bot, new CMoveTo(target));
-                EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Pickup));
+                EntityManager.AddComponentData(bot, new CGrabAction(target, GrabType.Pickup, default, new ItemInfo(plate)));
             }
             else
             {

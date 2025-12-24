@@ -106,15 +106,23 @@ namespace Neuro_Plateup
 
         public GrabType Type;
 
-        public CGrabAction(int x, int y, int z, GrabType type)
+        public ItemInfo HandItem;
+
+        public ItemInfo ApplianceItem;
+
+        public CGrabAction(int x, int y, int z, GrabType type, ItemInfo hand = default, ItemInfo appliance = default)
         {
             Position = new Vector3 { x = x, y = y, z = z };
             Type = type;
+            HandItem = hand;
+            ApplianceItem = appliance;
         }
-        public CGrabAction(Vector3 position, GrabType type)
+        public CGrabAction(Vector3 position, GrabType type, ItemInfo hand = default, ItemInfo appliance = default)
         {
             Position = position;
             Type = type;
+            HandItem = hand;
+            ApplianceItem = appliance;
         }
     }
 

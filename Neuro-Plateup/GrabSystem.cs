@@ -23,8 +23,6 @@ namespace Neuro_Plateup
                     .All(
                         typeof(CBotControl),
                         typeof(CGrabAction)
-                    ).None(
-                        typeof(CMoveTo)
                     ));
             InputCapturesQuery = GetEntityQuery(
                 new QueryHelper()
@@ -50,25 +48,43 @@ namespace Neuro_Plateup
                 evt.User = ID;
                 var comp = GetComponent<CGrabAction>(bot);
                 var appliance = TileManager.GetPrimaryOccupant(comp.Position);
-                var hasHeld = GetComponentOfHeld<CItem>(appliance, out _) ^ GetComponentOfHeld<CItem>(bot, out _);
+                ItemInfo compHands = default;
+                ItemInfo compAppl = default;
+                if (GetComponentOfHeld<CItem>(appliance, out var compOut))
+                    compAppl = new ItemInfo(compOut);
+                if (GetComponentOfHeld<CItem>(bot, out compOut))
+                    compHands = new ItemInfo(compOut);
 
-                if ((comp.Type == GrabType.Drop && !hasHeld || comp.Type == GrabType.Pickup) && !hasHeld)
+                switch (comp.Type)
                 {
-                    grabInfo[ID] = 0;
-                    EntityManager.RemoveComponent<CGrabAction>(bot);
+                    case GrabType.Dispense:
+                        if ((ApplianceCapacity(appliance, out var current, out var maximum) && current == 0 && maximum != 0) || compHands != comp.HandItem)
+                        {
+                            ClearComponents(bot, ID, evt);
+                            continue;
+                        }
+                        break;
+                    case GrabType.Fill:
+                        if ((ApplianceCapacity(appliance, out var curr, out var maxi) && curr == maxi && maxi != 0) || compHands != comp.HandItem)
+                        {
+                            ClearComponents(bot, ID, evt);
+                            continue;
+                        }
+                        break;
+                    case GrabType.CombineDrop:
+                    case GrabType.Drop:
+                    case GrabType.Pickup:
+                    case GrabType.Undefined:
+                        if (compHands != comp.HandItem || compAppl != comp.ApplianceItem)
+                        {
+                            ClearComponents(bot, ID, evt);
+                            continue;
+                        }
+                        break;
+                }
+
+                if (HasComponent<CMoveTo>(bot))
                     continue;
-                }
-
-
-                if (ApplianceCapacity(appliance, out var current, out var maximum))
-                {
-                    if (comp.Type == GrabType.Fill && current == maximum || comp.Type == GrabType.Dispense && current == 0)
-                    {
-                        grabInfo[ID] = 0;
-                        EntityManager.RemoveComponent<CGrabAction>(bot);
-                        continue;
-                    }
-                }
 
                 if (Require<CAttemptingInteraction>(bot, out var comp3) && comp3.Target == appliance)
                 {
@@ -85,14 +101,6 @@ namespace Neuro_Plateup
                             input.Send(evt);
                         }
                     }
-                    else if (comp3.Type == InteractionType.Grab && comp3.Result == InteractionResult.Performed)
-                    {
-                        evt.State.GrabAction = ButtonState.Released;
-                        input.Send(evt);
-                        grabInfo[ID] = 0;
-                        EntityManager.RemoveComponent<CGrabAction>(bot);
-                        
-                    }
                     continue;
                 }
 
@@ -104,6 +112,15 @@ namespace Neuro_Plateup
             BotEntities.Dispose();
         }
         
+        private void ClearComponents(Entity bot, int ID, InputUpdateEvent evt)
+        {
+            evt.State.GrabAction = ButtonState.Released;
+            input.Send(evt);
+            grabInfo[ID] = 0;
+            EntityManager.RemoveComponent<CMoveTo>(bot);
+            EntityManager.RemoveComponent<CGrabAction>(bot);
+        }
+
         private bool ApplianceCapacity(Entity appliance, out int current, out int maximum)
         {
             if (Require<CApplianceBin>(appliance, out var compBin))
