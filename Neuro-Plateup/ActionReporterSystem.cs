@@ -101,6 +101,11 @@ namespace Neuro_Plateup
             }
         }
 
+        protected override void ClearActions(int id)
+        {
+            RegisteredActions[id].Clear();
+        }
+
         protected override void OnAction(int id, string payload)
         {
             var action = new NeuroAPI.Answer();

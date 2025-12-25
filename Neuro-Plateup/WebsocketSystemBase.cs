@@ -1,10 +1,10 @@
 using Kitchen;
 using KitchenMods;
 using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Threading;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using WebSocketSharp;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -29,11 +29,10 @@ namespace Neuro_Plateup
         {
             public Thread Thread;
             public WebSocket Socket;
-            public ConcurrentQueue<string> OutgoingMessages = new ConcurrentQueue<string>();
+            public readonly BlockingCollection<string> OutgoingMessages = new BlockingCollection<string>(new ConcurrentQueue<string>());
         }
 
         private static Dictionary<int, WebSocketEntry> _clientConfigs;
-
         private static readonly ConcurrentDictionary<int, WebSocketClient> _clients = new ConcurrentDictionary<int, WebSocketClient>();
         private static readonly ConcurrentQueue<(int, string)> _mainThreadQueue = new ConcurrentQueue<(int, string)>();
         private volatile bool _isRunning = false;
@@ -42,13 +41,12 @@ namespace Neuro_Plateup
         private static bool IsValidWebSocketUrl(string url)
         {
             return Uri.TryCreate(url, UriKind.Absolute, out var uriResult) &&
-                (uriResult.Scheme == "ws" || uriResult.Scheme == "wss");
+                   (uriResult.Scheme == "ws" || uriResult.Scheme == "wss");
         }
 
         private static Dictionary<int, WebSocketEntry> ReadWebSocketCsv(string filePath)
         {
             var result = new Dictionary<int, WebSocketEntry>();
-
             using (var reader = new StreamReader(filePath))
             {
                 int lineNumber = 1;
@@ -56,28 +54,33 @@ namespace Neuro_Plateup
                 while ((line = reader.ReadLine()) != null)
                 {
                     var parts = line.Split(',');
-
                     if (parts.Length != 2)
                     {
                         Debug.LogError($"[Config] Invalid CSV format at line {lineNumber}: \"{line}\"");
+                        lineNumber++;
+                        continue;
                     }
 
                     string url = parts[0].Trim();
                     if (!IsValidWebSocketUrl(url))
                     {
                         Debug.LogError($"[Config] Invalid ws url at line {lineNumber}: \"{line}\"");
+                        lineNumber++;
+                        continue;
                     }
+
                     string name = parts[1].Trim();
                     if (name.Length > 20 || name.Length < 1)
                     {
-                        Debug.LogError($"[Config] Invalid profile name lenght at line {lineNumber}: \"{line}\"");
+                        Debug.LogError($"[Config] Invalid profile name length at line {lineNumber}: \"{line}\"");
+                        lineNumber++;
+                        continue;
                     }
 
                     result[lineNumber] = new WebSocketEntry(url, name);
                     lineNumber++;
                 }
             }
-
             return result;
         }
 
@@ -107,35 +110,53 @@ namespace Neuro_Plateup
 
         private void WebSocketWorker(int id, string url)
         {
-            try
+            if (!_clients.TryGetValue(id, out var client))
+                return;
+
+            while (_isRunning)
             {
-                var ws = new WebSocket(url);
-
-                ws.OnMessage += (sender, e) =>
+                WebSocket ws = null;
+                try
                 {
-                    _mainThreadQueue.Enqueue((id, e.Data));
-                };
+                    ws = new WebSocket(url);
+                    client.Socket = ws;
 
-                ws.OnOpen += (sender, e) =>
-                {
-                    Console.WriteLine($"[WebSocket {id}] Connected.");
-                    EnqueueMessage(id, new NeuroAPI.Startup());
-                };
-                ws.OnClose += (sender, e) => Console.WriteLine($"[WebSocket {id}] Disconnected.");
-                ws.OnError += (sender, e) => Console.WriteLine($"[WebSocket {id}] Error: {e.Message}");
-
-                if (!_clients.TryGetValue(id, out var client))
-                {
-                    return;
-                }
-                client.Socket = ws;
-
-                ws.Connect();
-
-                while (_isRunning && ws.IsAlive)
-                {
-                    while (client.OutgoingMessages.TryDequeue(out var msg))
+                    ws.OnOpen += (_, __) =>
                     {
+                        Debug.Log($"[WebSocket {id}] Connected");
+                        _mainThreadQueue.Enqueue((id, "clear"));
+                        EnqueueMessage(id, new NeuroAPI.Startup());
+                    };
+
+                    ws.OnMessage += (_, e) =>
+                        _mainThreadQueue.Enqueue((id, e.Data));
+
+                    ws.OnClose += (_, __) =>
+                    {
+                        Debug.Log($"[WebSocket {id}] Disconnected");
+                        client.OutgoingMessages.Add(string.Empty);
+                    };
+
+                    ws.OnError += (_, e) =>
+                    {
+                        Debug.Log($"[WebSocket {id}] Error: {e.Message}");
+                        client.OutgoingMessages.Add(string.Empty);
+                    };
+
+                    ws.Connect();
+
+                    while (_isRunning)
+                    {
+                        string msg;
+                        try
+                        {
+                            msg = client.OutgoingMessages.Take();
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            break;
+                        }
+
                         try
                         {
                             ws.Send(msg);
@@ -143,30 +164,30 @@ namespace Neuro_Plateup
                         catch (Exception ex)
                         {
                             Console.WriteLine($"[WebSocket {id}] Send error: {ex.Message}");
+                            while (client.OutgoingMessages.TryTake(out _)) { }
+                            break;
                         }
                     }
-
-                    Thread.Sleep(100);
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log($"[WebSocket {id}] Exception: {ex.Message}");
                 }
 
-                ws.Close();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[WebSocket {id}] Exception: {ex.Message}");
+                if (_isRunning)
+                {
+                    Debug.Log($"[WebSocket {id}] Reconnecting in 2s...");
+                    Thread.Sleep(2000);
+                }
             }
         }
 
         public void EnqueueMessage(int id, object obj)
         {
-            if (_clients.TryGetValue(id, out var client))
+            if (_clients.TryGetValue(id, out var client) && client.Socket.IsAlive)
             {
                 string message = JsonConvert.SerializeObject(obj, Formatting.Indented);
-                client.OutgoingMessages.Enqueue(message);
-            }
-            else
-            {
-                Console.WriteLine($"[WebSocket {id}] No client found to send message.");
+                client.OutgoingMessages.Add(message);
             }
         }
 
@@ -176,40 +197,33 @@ namespace Neuro_Plateup
 
             foreach (var kvp in _clients)
             {
+                var client = kvp.Value;
+
                 try
                 {
-                    kvp.Value.Socket?.Close();
-                    kvp.Value.Thread?.Join();
+                    client.OutgoingMessages.CompleteAdding();
+                    client.Socket?.Close();
+                    client.Thread?.Join();
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[Shutdown] Error stopping client {kvp.Key}: {ex.Message}");
-                }
+                catch { }
             }
         }
 
-        public void PreInject()
-        {
-
-        }
-
-        public void PostInject()
-        {
-
-        }
-
-        protected override void Initialise()
-        {
-            base.Initialise();
-        }
+        public void PreInject() { }
+        public void PostInject() { }
+        protected override void Initialise() => base.Initialise();
 
         protected abstract void OnAction(int id, string payload);
+        protected abstract void ClearActions(int id);
 
         protected override void OnUpdate()
         {
-            while (_mainThreadQueue.TryDequeue(out var item))
+            while (_mainThreadQueue.TryDequeue(out var obj))
             {
-                OnAction(item.Item1, item.Item2);
+                if (obj.Item2 == "clear")
+                    ClearActions(obj.Item1);
+                else
+                    OnAction(obj.Item1, obj.Item2);
             }
         }
 
@@ -218,10 +232,7 @@ namespace Neuro_Plateup
             var clients = new Dictionary<int, string>();
             foreach (var entry in _clientConfigs)
             {
-                if (_clients[entry.Key].Socket.IsAlive)
-                {
-                    clients[entry.Key] = entry.Value.Name;
-                }
+                clients[entry.Key] = entry.Value.Name;
             }
             return clients;
         }
