@@ -18,6 +18,9 @@ namespace Neuro_Plateup
 
         [JsonProperty("items", NullValueHandling = NullValueHandling.Ignore)]
         public JsonSchema Items { get; set; }
+
+        [JsonProperty("minItems", NullValueHandling = NullValueHandling.Ignore)]
+        public int? MinItems { get; set; }
     }
 
     public class JsonSchemaProperty
@@ -116,6 +119,7 @@ namespace Neuro_Plateup
                             },
                             Required = new List<string> { "dish", "amount" }
                         },
+                        MinItems = 1
                     };
 
                 default:
@@ -130,6 +134,12 @@ namespace Neuro_Plateup
             if (dataArray == null || schema == null)
             {
                 reason = "Parse error";
+                return false;
+            }
+
+            if (dataArray.Count == 0)
+            {
+                reason = "No items in list";
                 return false;
             }
 
