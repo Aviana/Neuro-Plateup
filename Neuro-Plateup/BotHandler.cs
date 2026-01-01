@@ -121,7 +121,6 @@ namespace Neuro_Plateup
                     {
                         EntityManager.AddComponent<CBotControl>(activePlayer);
                         EntityManager.AddBuffer<CBotFeedback>(activePlayer);
-                        EntityManager.AddBuffer<CBotItems>(activePlayer);
                         if (currentRoles.ContainsKey(ID))
                         {
                             EntityManager.AddComponentData(activePlayer, new CBotRole(currentRoles[ID]));

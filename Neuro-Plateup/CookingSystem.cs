@@ -18,6 +18,8 @@ namespace Neuro_Plateup
 
         private MoveToSystem moveTo;
 
+        private static Dictionary<int ,Dictionary<Vector3, ItemInfo>> ItemMemory = new Dictionary<int, Dictionary<Vector3, ItemInfo>>();
+
         private static Dictionary<int, Action<Entity, List<ItemInfo>>> MealFunctions;
 
         public static HashSet<int> CookingAppliances, DishWashers, Sinks, Bins, Counters, WaterProviders, Plates, Tables, DirtyPlates, Trash, Condiments, NoAppliances;
@@ -104,6 +106,11 @@ namespace Neuro_Plateup
                     ));
             TableQuery = GetEntityQuery(typeof(CApplianceTable));
             ApplianceQuery = GetEntityQuery(typeof(CAppliance));
+
+            for (var i = 1; i <= 4; i++)
+            {
+                ItemMemory[i] = new Dictionary<Vector3, ItemInfo>();
+            }
 
             CookingAppliances = new HashSet<int> { 1154757341, -1448690107, 1266458729, 862493270, -441141351, 805530854, 944301512, -1311702572, -1068749602, 782648278, -1688921160 };
             DishWashers = new HashSet<int> { -214126192, -823922901 };
@@ -1169,47 +1176,69 @@ namespace Neuro_Plateup
 
         private void ClearItemMemory(Entity bot)
         {
-            GetBuffer<CBotItems>(bot).Clear();
+            var ID = GetComponent<CPlayer>(bot).ID;
+            ItemMemory[ID].Clear();
         }
 
         private void RemoveItemMemory(Entity bot, ItemInfo item)
         {
-            var itemMemory = GetBuffer<CBotItems>(bot);
-            for (var i = 0; i < itemMemory.Length; i++)
+            var ID = GetComponent<CPlayer>(bot).ID;
+            var markedForDeletion = new List<Vector3>();
+            foreach (var entry in ItemMemory[ID])
             {
-                if (itemMemory[i].Item == item)
+                if (entry.Value == item)
                 {
-                    itemMemory.RemoveAt(i);
-                    return;
+                    markedForDeletion.Add(entry.Key);
                 }
             }
+            foreach (var pos in markedForDeletion)
+            {
+                ItemMemory[ID].Remove(pos);
+            }
+        }
+
+        private void RemoveItemMemory(Entity bot, Vector3 pos)
+        {
+            var ID = GetComponent<CPlayer>(bot).ID;
+            ItemMemory[ID].Remove(pos);
         }
 
         private void UpdateItemMemory(Entity bot, int item, Vector3 pos, int ingredient)
         {
-            var itemMemory = GetBuffer<CBotItems>(bot);
-            foreach (var entry in itemMemory)
+            var ID = GetComponent<CPlayer>(bot).ID;
+            if (ItemMemory[ID].ContainsKey(pos))
             {
-                if (entry.Item == item && entry.Position == pos)
-                {
-                    entry.Item.Items.Add(ingredient);
-                }
+                if (ItemMemory[ID][pos].ID == item)
+                    ItemMemory[ID][pos].Items.Add(ingredient);
             }
         }
 
         private void AddItemMemory(Entity bot, ItemInfo item, Vector3 pos)
         {
-            GetBuffer<CBotItems>(bot).Add(new CBotItems(item, pos));
+            var ID = GetComponent<CPlayer>(bot).ID;
+            ItemMemory[ID][pos] = item;
         }
 
         private int GetNumItemsInMemory(Entity bot, ItemInfo item)
         {
             int num = 0;
-            var itemMemory = GetBuffer<CBotItems>(bot);
-            foreach (var entry in itemMemory)
+            var ID = GetComponent<CPlayer>(bot).ID;
+            var markedForDeletion = new List<Vector3>();
+            foreach (var entry in ItemMemory[ID])
             {
-                if (entry.Item == item)
-                    num ++;
+                if (entry.Value == item)
+                {
+                    var ent = TileManager.GetPrimaryOccupant(entry.Key);
+                    if (GetComponentOfHeld<CItem>(ent, out var comp) && comp == item)
+                        num ++;
+                    else
+                        markedForDeletion.Add(entry.Key);
+
+                }
+            }
+            foreach (var pos in markedForDeletion)
+            {
+                ItemMemory[ID].Remove(pos);
             }
             return num;
         }
@@ -1217,59 +1246,66 @@ namespace Neuro_Plateup
         private bool TryGetItemMemory(Entity bot, int item, out Vector3 pos)
         {
             pos = new Vector3();
-            var itemMemory = GetBuffer<CBotItems>(bot);
-            foreach (var entry in itemMemory)
+            var ID = GetComponent<CPlayer>(bot).ID;
+            var markedForDeletion = new List<Vector3>();
+            foreach (var entry in ItemMemory[ID])
             {
-                if (entry.Item.ID == item)
+                if (entry.Value.ID == item)
                 {
-                    var ent = TileManager.GetPrimaryOccupant(entry.Position);
-                    if (GetComponentOfHeld<CItem>(ent, out var comp) && entry.Item.ID == comp.ID)
+                    var ent = TileManager.GetPrimaryOccupant(entry.Key);
+                    if (GetComponentOfHeld<CItem>(ent, out var comp) && entry.Value.ID == comp.ID)
                     {
-                        pos = entry.Position;
+                        pos = entry.Key;
+                        foreach (var position in markedForDeletion)
+                        {
+                            ItemMemory[ID].Remove(position);
+                        }
                         return true;
                     }
                     else
                     {
-                        RemoveItemMemory(bot, entry.Item);
-                        break;
+                        markedForDeletion.Add(entry.Key);
                     }
                 }
             }
-
+            foreach (var position in markedForDeletion)
+            {
+                ItemMemory[ID].Remove(position);
+            }
             return false;
         }
 
         private bool TryGetItemMemory(Entity bot, HashSet<int> items, out Vector3 pos, out ItemInfo item)
         {
+            var ID = GetComponent<CPlayer>(bot).ID;
             pos = new Vector3();
             item = default;
-            var itemMemory = GetBuffer<CBotItems>(bot);
             var flag = false;
-            var markedForDeletion = new List<ItemInfo>();
-            foreach (var entry in itemMemory)
+            var markedForDeletion = new List<Vector3>();
+            foreach (var entry in ItemMemory[ID])
             {
-                if (items.Contains(entry.Item.ID))
+                if (items.Contains(entry.Value.ID))
                 {
-                    var ent = TileManager.GetPrimaryOccupant(entry.Position);
+                    var ent = TileManager.GetPrimaryOccupant(entry.Key);
                     if (GetComponentOfHeld<CItem>(ent, out var comp))
                     {
-                        if (comp.ID == entry.Item.ID)
+                        if (comp.ID == entry.Value.ID)
                         {
-                            pos = entry.Position;
-                            item = entry.Item;
+                            pos = entry.Key;
+                            item = entry.Value;
                             flag = true;
                             break;
                         }
                         else
                         {
-                            markedForDeletion.Add(entry.Item);
+                            markedForDeletion.Add(entry.Key);
                         }
                     }
                 }
             }
             foreach (var i in markedForDeletion)
             {
-                RemoveItemMemory(bot, i);
+                ItemMemory[ID].Remove(i);
             }
             return flag;
         }
@@ -1277,29 +1313,32 @@ namespace Neuro_Plateup
         private bool TryGetItemMemory(Entity bot, ItemInfo item, out Vector3 pos)
         {
             pos = new Vector3();
-            var itemMemory = GetBuffer<CBotItems>(bot);
-            var flag = false;
-            foreach (var entry in itemMemory)
+            var ID = GetComponent<CPlayer>(bot).ID;
+            var markedForDeletion = new List<Vector3>();
+            foreach (var entry in ItemMemory[ID])
             {
-                if (entry.Item == item)
+                if (entry.Value == item)
                 {
-                    var ent = TileManager.GetPrimaryOccupant(entry.Position);
-                    if (GetComponentOfHeld<CItem>(ent, out var comp) && entry.Item == comp)
+                    var ent = TileManager.GetPrimaryOccupant(entry.Key);
+                    if (GetComponentOfHeld<CItem>(ent, out var comp) && entry.Value == comp)
                     {
-                        pos = entry.Position;
+                        pos = entry.Key;
+                        foreach (var i in markedForDeletion)
+                        {
+                            ItemMemory[ID].Remove(i);
+                        }
                         return true;
                     }
                     else
                     {
-                        flag = true;
-                        break;
+                        markedForDeletion.Add(entry.Key);
                     }
                 }
             }
-
-            if (flag)
-                RemoveItemMemory(bot, item);
-
+            foreach (var i in markedForDeletion)
+            {
+                ItemMemory[ID].Remove(i);
+            }
             return false;
         }
 
@@ -1307,33 +1346,33 @@ namespace Neuro_Plateup
         {
             pos = new Vector3();
             item = default;
-            var itemMemory = GetBuffer<CBotItems>(bot);
+            var ID = GetComponent<CPlayer>(bot).ID;
             var flag = false;
-            var markedForDeletion = new List<ItemInfo>();
-            foreach (var entry in itemMemory)
+            var markedForDeletion = new List<Vector3>();
+            foreach (var entry in ItemMemory[ID])
             {
-                if (items.Contains(entry.Item))
+                if (items.Contains(entry.Value))
                 {
-                    var ent = TileManager.GetPrimaryOccupant(entry.Position);
+                    var ent = TileManager.GetPrimaryOccupant(entry.Key);
                     if (GetComponentOfHeld<CItem>(ent, out var comp))
                     {
-                        if (comp == entry.Item)
+                        if (comp == entry.Value)
                         {
-                            pos = entry.Position;
-                            item = entry.Item;
+                            pos = entry.Key;
+                            item = entry.Value;
                             flag = true;
                             break;
                         }
                         else
                         {
-                            markedForDeletion.Add(entry.Item);
+                            markedForDeletion.Add(entry.Key);
                         }
                     }
                 }
             }
             foreach (var i in markedForDeletion)
             {
-                RemoveItemMemory(bot, i);
+                ItemMemory[ID].Remove(i);
             }
             return flag;
         }
